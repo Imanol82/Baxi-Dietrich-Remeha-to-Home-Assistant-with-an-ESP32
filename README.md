@@ -29,7 +29,7 @@ I have used an ESP32 ETH POE, but any will work.:
 
 The wiring diagram:
 
-![Alt text](images/Wiring Diagram.png)
+![Alt text](images/Wiring_Diagram.png)
 
 
 Now we will only have to create the ESP32 in ESPHome.
