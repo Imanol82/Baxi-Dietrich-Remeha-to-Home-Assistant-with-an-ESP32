@@ -1,37 +1,94 @@
-title: Baxi Modbus
-path: baxi-modbus
-cards:
-  - type: vertical-stack
+type: sections
+max_columns: 3
+title: Baxi ESP32
+path: baxi-climates
+sections:
+  - type: grid
     cards:
-      - type: conditional
-        conditions:
-          - condition: state
-            entity: sensor.acs_bit_actividad
-            state: "1"
-        card:
-          type: thermostat
-          entity: climate.baxi_acs_eco
-          features:
-            - type: climate-hvac-modes
-          show_current_as_primary: true
-      - type: conditional
-        conditions:
-          - condition: state
-            entity: sensor.acs_bit_actividad
-            state_not: "1"
-        card:
-          type: thermostat
-          entity: climate.baxi_acs_confort
-          show_current_as_primary: true
-          features:
-            - type: climate-hvac-modes
-      - type: entities
-        entities:
-          - entity: sensor.acs_temperatura
-          - entity: sensor.acs_temp_confort
-          - entity: sensor.acs_temp_eco
-  - type: thermostat
-    entity: climate.baxi_aacc
-    features:
-      - type: climate-hvac-modes
-    show_current_as_primary: true
+      - type: vertical-stack
+        cards:
+          - type: entities
+            entities:
+              - entity: sensor.am027_temp_exterior_384
+              - entity: sensor.am101_cons_interna_405
+              - entity: number.cp000_max_cons_temp_ida_672
+              - entity: sensor.hm001_temp_ida_bomba_403
+              - entity: sensor.hm002_temp_retorno_bomba_404
+              - entity: sensor.dtemp
+              - entity: sensor.am056_caudal_410
+              - entity: sensor.am019_presion_del_agua_409
+              - entity: sensor.meter_aacc_interior_power
+              - entity: sensor.meter_aacc_exterior_power
+              - entity: sensor.meter_aacc_potencia
+              - entity: sensor.pot_termica
+              - entity: sensor.cop
+              - entity: sensor.am012_estado_del_aparato_411
+              - entity: sensor.cons_de_potencia_en_del_maximo_414
+              - entity: sensor.ac005_energia_consumida_cc_433
+              - entity: sensor.ac006_energia_consumida_acs_435
+              - entity: sensor.ac007_energia_consumida_aacc_437
+            title: BAXI
+            show_header_toggle: false
+            state_color: true
+  - type: grid
+    cards:
+      - type: vertical-stack
+        cards:
+          - type: entities
+            entities:
+              - entity: sensor.am012_estado_del_aparato_411
+                secondary_info: last-changed
+            title: BAXI
+            show_header_toggle: false
+            state_color: false
+        grid_options:
+          columns: full
+      - type: vertical-stack
+        cards:
+          - type: history-graph
+            entities:
+              - entity: sensor.am012_estado_del_aparato_411
+          - type: history-graph
+            entities:
+              - entity: sensor.meter_aacc_potencia
+              - entity: sensor.dm001_temp_tanque_de_acs_1631
+      - type: gauge
+        entity: sensor.cop
+        max: 10
+  - type: grid
+    cards:
+      - type: vertical-stack
+        cards:
+          - type: entities
+            entities:
+              - entity: select.cp320_modo_trabajo_climatizacion_649
+              - entity: select.dp570_programa_horario_de_la_climatizacion_688
+              - entity: number.cp510_temp_cons_temporal_663
+              - entity: number.cp200_temp_cons_manual_664
+              - entity: number.cp230_pendiente_curva_cc_674
+              - entity: number.cp210_temp_pie_curva_cc_confort_675
+              - entity: number.cp220_temp_pie_curva_cc_eco_676
+              - entity: number.cp750_precalentamiento_max_677
+              - entity: number.dp213_postfuncionamiento_bomba_687
+              - entity: binary_sensor.cm050_estado_de_la_bomba_de_cc_1110
+            title: CLIMATIZACION
+            show_header_toggle: false
+            state_color: true
+      - type: vertical-stack
+        cards:
+          - type: entities
+            entities:
+              - entity: select.cp320_modo_trabajo_acs_1161
+              - entity: sensor.dm001_temp_tanque_de_acs_1631
+              - entity: number.dp070_temp_confort_acs_1177
+              - entity: number.dp080_temp_eco_acs_1178
+              - entity: number.dp337_temp_vacaciones_acs_1179
+              - entity: number.temp_antilegionella_acs_1180
+              - entity: number.dp120_histeresis_para_la_carga_del_tanque_de_acs_1198
+              - entity: number.dp220_histeresis_acs_1192
+              - entity: sensor.cm130_actividad_del_acs_activa_actual_1619
+            show_header_toggle: false
+            state_color: true
+            title: ACS
+cards: []
+
