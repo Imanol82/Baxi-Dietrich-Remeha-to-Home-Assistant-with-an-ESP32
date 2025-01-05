@@ -264,6 +264,19 @@ sensor:
     filters:
       - multiply:  1
 
+  - platform: modbus_controller                       #1104 varZoneTRoom 8-1
+    modbus_controller_id: $devicename
+    name: "Temp. ambiente actual 1104"   
+    address: 1104
+    register_type: holding
+    value_type: S_WORD
+    unit_of_measurement: "°C"
+    accuracy_decimals: 1
+    device_class: temperature
+    state_class: measurement
+    filters:
+      - multiply:  0.1
+
   - platform: modbus_controller                       #1631 varDhwTankTemperature 8-1
     modbus_controller_id: $devicename
     name: "DM001 Temp. tanque de ACS 1631"   
