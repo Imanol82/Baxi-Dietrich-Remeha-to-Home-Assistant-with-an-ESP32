@@ -25,11 +25,11 @@ First of all you need a GTW-08 gateway to convert the RBus signal to Modbus:
 To read the Modbus signal, I will use an ESP32 with the typical TTL to RS485 reader.
 I have used an ESP32 ETH POE, but any will work.:
 
-![image](https://github.com/user-attachments/assets/56a6bf2d-e013-489a-89d2-ad10d122b4bb)
+![Alt text](images/ESP32.png)
 
 The wiring diagram:
 
-![image](https://github.com/user-attachments/assets/0c5851d2-7bc2-4179-8aeb-861544849b7d)
+![Alt text](images/Wiring Diagram.png)
 
 
 Now we will only have to create the ESP32 in ESPHome.
@@ -670,7 +670,7 @@ In order to calculate the COP, we need to have a clamp that measures the consump
 
 This is the result:
 
-![image](https://github.com/user-attachments/assets/7b671f23-0a75-44f0-9647-0553135b3799)
+![Alt text](images/Dashboard.png)
 
 Now it's time to improve the system, clearing the names... but, I hope this project is useful and I hope to improve it with everyone's help. 
 
