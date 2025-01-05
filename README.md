@@ -670,7 +670,7 @@ In order to calculate the COP, we need to have a clamp that measures the consump
 
 This is the result:
 
-![image](https://github.com/user-attachments/assets/4725e67c-19cd-497e-bbe2-beb45bcda72c)
+![image](https://github.com/user-attachments/assets/7b671f23-0a75-44f0-9647-0553135b3799)
 
 Now it's time to improve the system, clearing the names... but, I hope this project is useful and I hope to improve it with everyone's help. 
 
