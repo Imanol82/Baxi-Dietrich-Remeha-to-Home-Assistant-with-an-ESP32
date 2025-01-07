@@ -14,6 +14,17 @@ Over time we will complete it more.
 
 Thanks!
 
+# New version 0.2:
+The idea is to use both the DHW and the Air Conditioning in manual mode, and use the Home Assistant scheduler to make programs, raise and lower the temperatures...
+
+So I have changed the yaml to the minimum parameters that I think are interesting and I have configured a new dashboard.
+The next thing will be to create 2 climate entities, one for the air conditioning and the other for the DHW.
+
+
+Thank you!
+
+######################
+
 -----------------------------------------------------------------------------------------------------------------------------------
 
 # Installation:
@@ -110,10 +121,13 @@ modbus_controller:
     command_throttle: "50ms"
 
 
+
 ##############################  ENTITIES  ##############################
 
 
+
 ##############################  SENSORS  ###############################
+
 
 
 sensor:
@@ -212,19 +226,6 @@ sensor:
     filters:
       - multiply:  0.01
 
-  - platform: modbus_controller                       #414 varHePowerSetpoint 8-1
-    modbus_controller_id: $devicename
-    name: "Cons. de potencia en % del máximo 414"   
-    address: 414
-    register_type: holding
-    value_type: U_WORD
-    unit_of_measurement: "%"
-    accuracy_decimals: 2
-    device_class: power_factor
-    state_class: measurement
-    filters:
-      - multiply:  0.001
-
   - platform: modbus_controller                       #433 varApChEnergyConsumption 24-17
     modbus_controller_id: $devicename
     name: "AC005 Energia consumida CC 433"   
@@ -291,7 +292,9 @@ sensor:
       - multiply:  0.01
 
 
+
 ##############################  TEMPLATES  ########################
+
 
 
   - platform: template
@@ -313,7 +316,9 @@ sensor:
       return (id(am056_caudal_410).state * 60 * (id(hm001_temp_ida_bomba_de_calor_403).state - id(hm002_temp_retorno_bomba_de_calor_404).state)/1);
 
 
+
 ##############################  BINARY SENSORS  ########################
+
 
 
 binary_sensor:
@@ -329,15 +334,8 @@ binary_sensor:
 ##############################  SWITCH  ################################
 
 
-switch:
 
-  - platform: modbus_controller                       #389 parApForceSummerMode
-    modbus_controller_id: $devicename
-    name: "AP074 Forzar modo verano 389"
-    address: 389
-    register_type: holding
-    use_write_multiple: True
-    bitmask: 1
+switch:
 
   - platform: modbus_controller                       #500 parApChEnabled
     modbus_controller_id: $devicename
@@ -354,10 +352,10 @@ switch:
     register_type: holding
     use_write_multiple: True
     bitmask: 1
-
+    
   - platform: modbus_controller                       #503 parApCoolingForced
     modbus_controller_id: $devicename
-    name: "AP015 Forzar bomba de calor en AACC 503"
+    name: "AP015 Habilitar Refrigeracion 503"
     address: 503
     register_type: holding
     use_write_multiple: True
@@ -366,6 +364,7 @@ switch:
 
 
 ##############################  NUMBER  ################################
+
 
 
 number:
@@ -379,18 +378,20 @@ number:
     device_class: temperature
     min_value: 0
     max_value: 30.5
+    step: 0.5
     value_type: U_WORD 
     multiply: 100
 
   - platform: modbus_controller                       #387 parApNeutralBandSummerWinter 8-1
     modbus_controller_id: $devicename
-    name: "AP075 Temp. ext apagar bomba de calor 387"
+    name: "AP075 Temp. ext apagar AACC 387"
     address: 387
     use_write_multiple: false
     unit_of_measurement: "°C"
     device_class: temperature
     min_value: 0
     max_value: 10
+    step: 0.5
     value_type: U_WORD 
     multiply: 100
 
@@ -403,20 +404,9 @@ number:
     device_class: temperature
     min_value: -30
     max_value: 20
+    step: 0.5
     value_type: S_WORD 
     multiply: 100
-
-  - platform: modbus_controller                       #663 parZoneAmbiantHolidaySetpoint 8-1
-    modbus_controller_id: $devicename
-    name: "CP510 Temp. cons. temporal 663"
-    address: 663
-    use_write_multiple: false
-    unit_of_measurement: "°C"
-    device_class: temperature
-    min_value: 5
-    max_value: 30
-    value_type: U_WORD 
-    multiply: 10
 
   - platform: modbus_controller                       #664 parZoneRoomManualSetpoint 8-1
     modbus_controller_id: $devicename
@@ -425,20 +415,34 @@ number:
     use_write_multiple: false
     unit_of_measurement: "°C"
     device_class: temperature
-    min_value: 5
+    min_value: 15
     max_value: 30
+    step: 0.5
     value_type: U_WORD 
     multiply: 10
 
   - platform: modbus_controller                       #672 parZoneTFlowSetpointMax 8-1
     modbus_controller_id: $devicename
-    name: "CP000 Max.Cons.Temp. Ida 672"
+    name: "CP000 Cons.Temp. Ida 672"
     address: 672
     use_write_multiple: false
     unit_of_measurement: "°C"
     device_class: temperature
     min_value: 7
     max_value: 100
+    step: 0.5
+    value_type: U_WORD 
+    multiply: 100
+
+  - platform: modbus_controller                       #673 parZoneTFlowCoolingMixingSetpoint 8-1
+    modbus_controller_id: $devicename
+    name: "CP270 Cons.Temp. AACC 673"
+    address: 673
+    use_write_multiple: false
+    unit_of_measurement: "°C"
+    device_class: temperature
+    min_value: 11
+    max_value: 23
     step: 0.5
     value_type: U_WORD 
     multiply: 100
@@ -456,7 +460,7 @@ number:
 
   - platform: modbus_controller                       #675 parZoneHCZPD 8-1
     modbus_controller_id: $devicename
-    name: "CP210 Temp. pie curva CC confort 675"
+    name: "CP210 Temp. pie curva confort 675"
     address: 675
     use_write_multiple: false
     unit_of_measurement: "°C"
@@ -469,7 +473,7 @@ number:
 
   - platform: modbus_controller                       #676 parZoneHCZPD 8-1
     modbus_controller_id: $devicename
-    name: "CP220 Temp. pie curva CC ECO 676"
+    name: "CP220 Temp. pie curva ECO 676"
     address: 676
     use_write_multiple: false
     unit_of_measurement: "°C"
@@ -480,20 +484,9 @@ number:
     value_type: U_WORD 
     multiply: 10
 
-  - platform: modbus_controller                       #677 parZoneMaxPreHeatTime 8-1
-    modbus_controller_id: $devicename
-    name: "CP750 Precalentamiento max. 677"
-    address: 677
-    use_write_multiple: false
-    unit_of_measurement: "min"
-    min_value: 0
-    max_value: 240
-    value_type: U_WORD 
-    multiply: 1
-
   - platform: modbus_controller                       #687 parZonePumpPostRun
     modbus_controller_id: $devicename
-    name: "DP213 Postfuncionamiento bomba 687"
+    name: "CP040 Postfuncionamiento bomba 687"
     address: 687
     use_write_multiple: false
     unit_of_measurement: "min"
@@ -504,63 +497,16 @@ number:
 
   - platform: modbus_controller                       #1177 parZoneDhwComfortSetpoint 8-1
     modbus_controller_id: $devicename
-    name: "DP070 Temp. confort ACS 1177"
+    name: "DP070 Temp. consig. ACS 1177"
     address: 1177
     use_write_multiple: false
     unit_of_measurement: "°C"
     device_class: temperature
     min_value: 40
     max_value: 80
+    step: 0.5
     value_type: U_WORD 
     multiply: 100
-
-  - platform: modbus_controller                       #1178 parZoneDhwReducedSetpoint 8-1
-    modbus_controller_id: $devicename
-    name: "DP080 Temp. ECO ACS 1178"
-    address: 1178
-    use_write_multiple: false
-    unit_of_measurement: "°C"
-    device_class: temperature
-    min_value: 10
-    max_value: 60
-    value_type: U_WORD 
-    multiply: 100
-
-  - platform: modbus_controller                       #1179 parZoneDhwHolidaySetpoint 8-1
-    modbus_controller_id: $devicename
-    name: "DP337 Temp. vacaciones ACS 1179"
-    address: 1179
-    use_write_multiple: false
-    unit_of_measurement: "°C"
-    device_class: temperature
-    min_value: 0
-    max_value: 100
-    value_type: U_WORD 
-    multiply: 100
-
-  - platform: modbus_controller                       #1180 parZoneDhwAntilegionelSetpoint 8-1
-    modbus_controller_id: $devicename
-    name: "Temp. antilegionella ACS 1180"
-    address: 1180
-    use_write_multiple: false
-    unit_of_measurement: "°C"
-    device_class: temperature
-    min_value: 0
-    max_value: 100
-    value_type: U_WORD 
-    multiply: 100
-
-  - platform: modbus_controller                       #1192 parZoneDhwHysterisis 8-1
-    modbus_controller_id: $devicename
-    name: "DP220 Histeresis ACS 1192"
-    address: 1192
-    use_write_multiple: false
-    unit_of_measurement: "°C"
-    device_class: temperature
-    min_value: 0
-    max_value: 100
-    value_type: U_WORD 
-    multiply: 1000
 
   - platform: modbus_controller                       #1198 parZoneDhwCalorifierHysterisis 8-1
     modbus_controller_id: $devicename
@@ -571,18 +517,21 @@ number:
     device_class: temperature
     min_value: 0
     max_value: 40
+    step: 0.5
     value_type: U_WORD 
     multiply: 100
 
 
+
 ##############################  SELECT  ################################
+
 
 
 select:
 
   - platform: modbus_controller                       #649 parZoneMode 1
     modbus_controller_id: $devicename
-    name: "CP320 Modo trabajo Climatizacion 649"
+    name: "CP320 Modo de Climatizacion 649"
     address: 649
     use_write_multiple: false
     value_type: U_WORD
@@ -590,23 +539,11 @@ select:
       "Programacion": 0
       "Manual": 1
       "Antiescarcha": 2
-    skip_updates: 10
-
-  - platform: modbus_controller                       #688 parZoneTimeProgramSelected 1
-    modbus_controller_id: $devicename
-    name: "DP570 Programa horario de la Climatizacion 688"
-    address: 688
-    use_write_multiple: false
-    value_type: U_WORD
-    optionsmap:
-      "Programa horario 1": 0
-      "Programa horario 2": 1
-      "Programa horario 3": 2
-    skip_updates: 10
+    skip_updates: 2
 
   - platform: modbus_controller                       #1161 parZoneMode 2
     modbus_controller_id: $devicename
-    name: "CP320 Modo trabajo ACS 1161"
+    name: "CP320 Modo ACS 1161"
     address: 1161
     use_write_multiple: True
     value_type: U_WORD
@@ -614,12 +551,13 @@ select:
       "Programacion": 0
       "Manual": 1
       "Antiescarcha": 2
-    skip_updates: 10
-  
+    skip_updates: 2
   
 
 
 ##############################  TEXT SENSOR  ###########################
+
+
 
 text_sensor:
 
@@ -650,9 +588,26 @@ text_sensor:
       }
       return x;
 
+  - platform: modbus_controller                       #1109 varZoneCurrentHeatingMode
+    modbus_controller_id: $devicename
+    name: "Actividad de Climatizacion actual 1109"
+    address: 1109
+    register_type: holding
+    bitmask: 1
+    raw_encode: HEXBYTES
+    lambda: |-
+      uint8_t value = modbus_controller::word_from_hex_str(x, 0);
+      switch (value) {
+        case 0: return std::string("Off");
+        case 1: return std::string("Calefaccion");
+        case 2: return std::string("AACC");
+        default: return std::string("Desconocido");
+      }
+      return x;
+
   - platform: modbus_controller                       #1619 varZoneCurrentActivities 2
     modbus_controller_id: $devicename
-    name: "CM130 Actividad del ACS activa actual 1619"
+    name: "CM130 Actividad de ACS actual 1619"
     address: 1619
     register_type: holding
     bitmask: 1
@@ -669,6 +624,7 @@ text_sensor:
       return x;
 
 
+
 ##############################  END  ###################################
 
 ```
@@ -683,7 +639,7 @@ In order to calculate the COP, we need to have a clamp that measures the consump
 
 This is the result:
 
-![Alt text](images/Dashboard_0.1.png)
+![Alt text](images/Dashboard_0.2.png)
 
 Now it's time to improve the system, clearing the names... but, I hope this project is useful and I hope to improve it with everyone's help. 
 
