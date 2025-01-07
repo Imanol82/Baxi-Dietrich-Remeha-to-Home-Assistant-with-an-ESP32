@@ -1,0 +1,95 @@
+type: sections
+max_columns: 3
+title: Baxi ESP32
+path: baxi-climates
+sections:
+  - type: grid
+    cards:
+      - type: vertical-stack
+        cards:
+          - type: entities
+            entities:
+              - entity: sensor.am027_temp_exterior_384
+              - entity: sensor.am101_cons_interna_405
+              - entity: number.cp000_cons_temp_ida_672
+              - entity: number.cp270_cons_temp_aacc_673
+              - entity: number.ap073_temp_ext_apagar_cc_386
+              - entity: number.ap075_temp_ext_apagar_aacc_387
+              - entity: number.ap080_temp_ext_activa_antihielo_388
+              - entity: sensor.hm001_temp_ida_bomba_403
+              - entity: sensor.hm002_temp_retorno_bomba_404
+              - entity: sensor.dtemp
+              - entity: sensor.am056_caudal_410
+              - entity: sensor.am019_presion_del_agua_409
+              - entity: sensor.meter_aacc_interior_power
+              - entity: sensor.meter_aacc_exterior_power
+              - entity: sensor.meter_aacc_potencia
+              - entity: sensor.pot_termica
+              - entity: sensor.cop
+              - entity: sensor.am012_estado_del_aparato_411
+              - entity: sensor.potencia_de_salida_real_272
+              - entity: sensor.ac005_energia_consumida_cc_433
+              - entity: sensor.ac006_energia_consumida_acs_435
+              - entity: sensor.ac007_energia_consumida_aacc_437
+            title: BAXI
+            show_header_toggle: false
+            state_color: true
+  - type: grid
+    cards:
+      - type: vertical-stack
+        cards:
+          - type: entities
+            entities:
+              - entity: sensor.am012_estado_del_aparato_411
+                secondary_info: last-changed
+            title: BAXI
+            show_header_toggle: false
+            state_color: false
+        grid_options:
+          columns: full
+      - type: vertical-stack
+        cards:
+          - type: history-graph
+            entities:
+              - entity: sensor.am012_estado_del_aparato_411
+          - type: history-graph
+            entities:
+              - entity: sensor.meter_aacc_potencia
+              - entity: sensor.dm001_temp_tanque_de_acs_1631
+      - type: gauge
+        entity: sensor.cop
+        max: 10
+  - type: grid
+    cards:
+      - type: vertical-stack
+        cards:
+          - type: entities
+            entities:
+              - entity: select.cp320_modo_de_climatizacion_649
+              - entity: sensor.actividad_de_climatizacion_actual_1109
+              - entity: sensor.temp_ambiente_actual_1104
+              - entity: number.cp200_temp_cons_manual_664
+              - entity: number.cp230_pendiente_curva_cc_674
+              - entity: number.cp210_temp_pie_curva_confort_675
+              - entity: number.cp220_temp_pie_curva_eco_676
+              - entity: number.cp040_postfuncionamiento_bomba_687
+              - entity: binary_sensor.cm050_estado_de_la_bomba_de_cc_1110
+              - entity: switch.ap016_habilitar_climatizacion_500
+              - entity: switch.ap015_habilitar_refrigeracion_503
+            title: CLIMATIZACION
+            show_header_toggle: false
+            state_color: true
+      - type: vertical-stack
+        cards:
+          - type: entities
+            entities:
+              - entity: select.cp320_modo_acs_1161
+              - entity: sensor.cm130_actividad_de_acs_actual_1619
+              - entity: sensor.dm001_temp_tanque_de_acs_1631
+              - entity: number.dp070_temp_consig_acs_1177
+              - entity: number.dp120_histeresis_para_la_carga_del_tanque_de_acs_1198
+              - entity: switch.ap017_habilitar_acs_501
+            show_header_toggle: false
+            state_color: true
+            title: ACS
+cards: []
