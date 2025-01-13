@@ -14,6 +14,8 @@ Over time we will complete it more.
 
 Thanks!
 
+-----------------------------------------------------------------------------------------------------------------------------------
+
 # Version 0.2:
 The idea is to use both the DHW and the Air Conditioning in manual mode, and use the Home Assistant scheduler to make programs, raise and lower the temperatures...
 
@@ -23,7 +25,7 @@ The next thing will be to create 2 climate entities, one for the air conditionin
 
 Thank you!
 
-
+-----------------------------------------------------------------------------------------------------------------------------------
 
 # Version 1.0:
 I have made the jump to version 1.0 because I think the system is already finished (except for small errors).
@@ -73,6 +75,7 @@ The wiring diagram:
 
 ![Alt text](images/Wiring_Diagram.png)
 
+-----------------------------------------------------------------------------------------------------------------------------------
 
 Now we will only have to create the ESP32 in ESPHome.
 
@@ -750,6 +753,7 @@ text_sensor:
 
 ##############################  END  ###################################
 ```
+-----------------------------------------------------------------------------------------------------------------------------------
 
 # - configuration.yaml:
 ```
@@ -758,6 +762,8 @@ template: !include template.yaml
 climate: !include climate.yaml
 switch: !include switch.yaml
 ```
+-----------------------------------------------------------------------------------------------------------------------------------
+
 # - automations.yaml
 ```
 ##############################  CLIMATES BAXI ACS Y CLIMATIZACION  ##############################
@@ -1001,6 +1007,8 @@ switch: !include switch.yaml
 ##############################  END  ##############################
 
 ```
+-----------------------------------------------------------------------------------------------------------------------------------
+
 # - template.yaml:
 ```
 ##############################  CLIMATES BAXI ACS Y CLIMATIZACION  ##############################
@@ -1017,6 +1025,8 @@ switch: !include switch.yaml
 ##############################  END  ##############################
 
 ```
+-----------------------------------------------------------------------------------------------------------------------------------
+
 # - climate.yaml:
 ```
 ##############################  CLIMATES BAXI ACS Y CLIMATIZACION  ##############################
@@ -1066,6 +1076,7 @@ switch: !include switch.yaml
 ##############################  END  ##############################
 
 ```
+-----------------------------------------------------------------------------------------------------------------------------------
 
 # - switch.yaml:
 ```
@@ -1159,9 +1170,7 @@ switch: !include switch.yaml
 
 
 ```
-
-
-
+-----------------------------------------------------------------------------------------------------------------------------------
 
 # To do list:
 - The 3 consumed energy entities do not work. I don't know how to fix it. Modbus 433, 435 and 437.
@@ -1172,7 +1181,7 @@ switch: !include switch.yaml
 
 ![image](https://github.com/user-attachments/assets/93f3bb1d-4d9c-4a95-aecb-88168c2c7d3e)
 
-
+-----------------------------------------------------------------------------------------------------------------------------------
 I hope this project is useful and I hope to improve it with everyone's help. 
 
 To be able to do this, I have received a lot of help from the telegram group "Aerothermia España/De Dietrich". 
