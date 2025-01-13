@@ -25,7 +25,7 @@ Thank you!
 
 ######################
 
-# New version 1.0:
+# Version 1.0:
 I have made the jump to version 1.0 because I think the system is already finished (except for small errors).
 
 What has changed in this version:
