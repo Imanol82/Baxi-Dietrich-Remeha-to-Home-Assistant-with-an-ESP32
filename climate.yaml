@@ -1,0 +1,45 @@
+##############################  CLIMATES BAXI ACS Y CLIMATIZACION  ##############################
+
+
+
+######## ACS Thermostat ########
+
+
+- platform: generic_thermostat
+  name: "ACS"
+  unique_id: climate.acs
+  heater: switch.heater_dumb
+  target_sensor: sensor.dm001_t_tanque_acs
+  min_temp: 40
+  max_temp: 65
+  ac_mode: false
+  target_temp_step: 0.5
+  min_cycle_duration:
+    seconds: 5
+  keep_alive:
+    minutes: 3
+  precision: 0.1
+
+
+
+######## Climatizacion Dual Mode Thermostat ########
+
+
+- platform: dualmode_generic
+  name: "Climatizacion"
+  unique_id: climate.climatizacion
+  heater: switch.heater_dumb
+  cooler: switch.cooler_dumb
+  target_sensor: sensor.cm030_t_ambiente
+  min_temp: 5
+  max_temp: 30
+  target_temp_step: 0.5
+  min_cycle_duration:
+    seconds: 5
+  keep_alive:
+    minutes: 3
+  precision: 0.1
+
+
+
+##############################  END  ##############################

@@ -1,0 +1,12 @@
+##############################  CLIMATES BAXI ACS Y CLIMATIZACION  ##############################
+
+
+
+- sensor:
+    - name: "COP"
+      unit_of_measurement: ""
+      state: "{{ (min(10, (states('sensor.potencia_termica')|float(0) / states('sensor.meter_aacc_potencia')|float(0))))| round(2) | abs }}"
+
+
+
+##############################  END  ##############################

@@ -1,0 +1,87 @@
+##############################  CLIMATES BAXI ACS Y CLIMATIZACION  ##############################
+
+
+
+######## ACS Thermostat ########
+
+
+- platform: template
+  switches:
+    acs_control:
+      friendly_name: "Control ACS"
+      value_template: "{{ is_state('switch.ap017_habilitar_acs', 'on') }}"
+      turn_on:
+        - service: switch.turn_on
+          target:
+            entity_id: switch.ap017_habilitar_acs
+        - service: climate.set_hvac_mode
+          target:
+            entity_id: climate.acs
+          data:
+            hvac_mode: "heat"
+      turn_off:
+        - service: switch.turn_off
+          target:
+            entity_id: switch.ap017_habilitar_acs
+        - service: climate.set_hvac_mode
+          target:
+            entity_id: climate.acs
+          data:
+            hvac_mode: "off"
+
+
+
+######## Climatizacion Dual Mode Thermostat ########
+
+
+    climatizacion_control:
+      friendly_name: "Control Climatización"
+      value_template: >-
+        {% if is_state('switch.ap015_habilitar_aacc', 'on') and 
+              is_state('switch.ap016_habilitar_climatizacion', 'on') %}
+          cool
+        {% elif is_state('switch.ap015_habilitar_aacc', 'off') and 
+              is_state('switch.ap016_habilitar_climatizacion', 'on') %}
+          heat
+        {% else %}
+          off
+        {% endif %}
+      turn_on:
+        - service: switch.turn_on
+          target:
+            entity_id: switch.ap016_habilitar_climatizacion
+        - service: switch.turn_on
+          target:
+            entity_id: switch.ap015_habilitar_aacc
+        - service: climate.set_hvac_mode
+          target:
+            entity_id: climate.climatizacion
+          data:
+            hvac_mode: "cool"
+        - service: switch.turn_on
+          target:
+            entity_id: switch.ap016_habilitar_climatizacion
+        - service: switch.turn_off
+          target:
+            entity_id: switch.ap015_habilitar_aacc
+        - service: climate.set_hvac_mode
+          target:
+            entity_id: climate.climatizacion
+          data:
+            hvac_mode: "heat"
+      turn_off:
+        - service: switch.turn_off
+          target:
+            entity_id: switch.ap016_habilitar_climatizacion
+        - service: switch.turn_off
+          target:
+            entity_id: switch.ap015_habilitar_aacc
+        - service: climate.set_hvac_mode
+          target:
+            entity_id: climate.climatizacion
+          data:
+            hvac_mode: "off"
+
+
+
+##############################  END  ##############################
