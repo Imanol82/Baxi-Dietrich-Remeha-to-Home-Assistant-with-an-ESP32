@@ -14,6 +14,26 @@ Over time we will complete it more.
 
 Thanks!
 
+# New version 1.0:
+I have made the jump to version 1.0 because I think the system is already finished (except for small errors).
+
+What has changed in this version:
+- Two Climate entities have been added, one for DHW and the other for Heating/Cooling.
+- The code has been divided into several files.
+
+How I intend to use it:
+The Baxi system will always be in manual mode.
+Using the Home Assistant scheduler addon, I will schedule when I want the system to turn on or off or when I want the temperature to change.
+
+
+
+
+
+
+Thank you!
+
+######################
+
 # New version 0.2:
 The idea is to use both the DHW and the Air Conditioning in manual mode, and use the Home Assistant scheduler to make programs, raise and lower the temperatures...
 
