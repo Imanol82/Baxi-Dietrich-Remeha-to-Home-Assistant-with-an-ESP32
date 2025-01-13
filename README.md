@@ -23,7 +23,7 @@ The next thing will be to create 2 climate entities, one for the air conditionin
 
 Thank you!
 
-######################
+
 
 # Version 1.0:
 I have made the jump to version 1.0 because I think the system is already finished (except for small errors).
@@ -54,7 +54,7 @@ The climates working:
 
 Thank you!
 
-######################
+
 
 -----------------------------------------------------------------------------------------------------------------------------------
 
