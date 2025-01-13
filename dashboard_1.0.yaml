@@ -1,0 +1,120 @@
+type: sections
+max_columns: 4
+title: Baxi Config.
+path: baxi-config.
+sections:
+  - type: grid
+    cards:
+      - type: vertical-stack
+        cards:
+          - type: entities
+            entities:
+              - entity: sensor.am027_t_exterior
+              - entity: sensor.am101_cons_interna
+              - entity: number.cp000_t_cons_ida
+              - entity: number.cp270_t_cons_aacc
+              - entity: number.ap073_t_ext_apagar_cc
+              - entity: number.ap075_t_ext_apagar_aacc
+              - entity: number.ap080_t_ext_antihielo
+              - entity: sensor.hm001_t_ida_bomba
+              - entity: sensor.hm002_t_retorno_bomba
+              - entity: sensor.dt
+              - entity: sensor.am056_caudal
+              - entity: sensor.am019_presion_de_agua
+              - entity: sensor.meter_aacc_interior_power
+              - entity: sensor.meter_aacc_exterior_power
+              - entity: sensor.meter_aacc_potencia
+              - entity: sensor.potencia_termica
+              - entity: sensor.cop
+              - entity: sensor.potencia_de_salida_real
+              - entity: sensor.ac005_energia_cc
+              - entity: sensor.ac006_energia_acs
+              - entity: sensor.ac007_energia_aacc
+            title: GENERAL
+            show_header_toggle: false
+            state_color: true
+      - type: gauge
+        entity: sensor.cop
+        max: 10
+        min: 0
+  - type: grid
+    cards:
+      - type: thermostat
+        entity: climate.climatizacion
+        features:
+          - style: icons
+            type: climate-hvac-modes
+            hvac_modes:
+              - heat
+              - cool
+              - "off"
+        show_current_as_primary: true
+      - type: custom:scheduler-card
+        title: true
+        include:
+          - climate.climatizacion
+        exclude: []
+        discover_existing: true
+        sort_by:
+          - state
+          - relative-time
+        display_options:
+          primary_info: default
+          secondary_info:
+            - relative-time
+            - days
+            - time
+          icon: action
+        show_header_toggle: false
+      - type: thermostat
+        entity: climate.acs
+        features:
+          - type: climate-hvac-modes
+        show_current_as_primary: true
+  - type: grid
+    cards:
+      - type: vertical-stack
+        cards:
+          - type: entities
+            entities:
+              - entity: select.cp320_modo_de_climatizacion
+              - entity: sensor.cm130_actividad_climatizacion
+              - entity: sensor.cm030_t_ambiente
+              - entity: number.cp200_t_cons_manual
+              - entity: number.cp210_t_pie_curva
+              - entity: number.cp230_pendiente_curva
+              - entity: number.cp040_postfuncionamiento_bomba
+              - entity: binary_sensor.cm050_bomba_de_cc
+              - entity: switch.ap016_habilitar_climatizacion
+              - entity: switch.ap015_habilitar_aacc
+            title: CLIMATIZACION
+            show_header_toggle: false
+            state_color: true
+      - type: vertical-stack
+        cards:
+          - type: entities
+            entities:
+              - entity: select.cp320_modo_acs
+              - entity: sensor.cm130_actividad_acs
+              - entity: sensor.dm001_t_tanque_acs
+              - entity: number.dp070_t_cons_acs
+              - entity: number.dp120_histeresis_acs
+              - entity: switch.ap017_habilitar_acs
+            show_header_toggle: false
+            state_color: true
+            title: ACS
+  - type: grid
+    cards:
+      - type: history-graph
+        hours_to_show: 24
+        entities:
+          - entity: sensor.am012_estado
+          - entity: sensor.am014_subestado
+          - entity: binary_sensor.cm050_bomba_de_cc
+          - entity: sensor.meter_aacc_interior_power
+          - entity: sensor.meter_aacc_exterior_power
+          - entity: sensor.cop
+          - entity: sensor.meter_aacc_potencia
+          - entity: sensor.dm001_t_tanque_acs
+        title: SEGUIMIENTO
+cards: []
