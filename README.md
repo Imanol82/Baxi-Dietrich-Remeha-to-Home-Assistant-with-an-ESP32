@@ -77,7 +77,7 @@ Now we will only have to create the ESP32 in ESPHome.
 
 # - ESP32.yaml:
 ```
-#This ESP32 device comes from Imanol82's project.
+#This ESP32 device comes from Imanol82's GitHub project.
 #Instructions for use can be found on github: https://github.com/Imanol82/Baxi-Dietrich-Remeha-to-Home-Assistant-with-an-ESP32
 #Thank you very much!
 
