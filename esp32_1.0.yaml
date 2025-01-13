@@ -1,0 +1,671 @@
+#This ESP32 device comes from Imanol82's project.
+#Instructions for use can be found on github: https://github.com/Imanol82/Baxi-Dietrich-Remeha-to-Home-Assistant-with-an-ESP32
+#Thank you very much!
+
+substitutions:
+  settings_skipped_updates: "30"
+  devicename: "baxi_esp"
+
+esphome:
+  name: $devicename
+
+esp32:
+  board: esp32-c3-devkitm-1
+  variant: esp32c3
+  framework:
+    type: esp-idf
+    version: latest
+#    platform_version: 6.5.0
+
+external_components:
+  - source: 
+      type: git
+      url: https://github.com/esphome/esphome
+      ref: d5bdf2575c151abfad39b6c24c3856395a7d0901
+    components:
+      - ethernet
+
+# Enable logging
+logger:
+
+# Enable Home Assistant API
+api:
+  encryption:
+    key: "niWJ1FLNtf3pFq2BAKeFOwJXO56nZ/NrcNRFrqbGvAQ="
+
+ota:
+  - platform: esphome
+    password: "7ac0bf8f303c4e6af4692bb3ba1d0d6a"
+
+ethernet:
+  id: my_network
+  type: DM9051 # W5500
+  clk_pin: 7
+  mosi_pin: 10
+  miso_pin: 3
+  cs_pin: 9
+  interrupt_pin: 8
+  reset_pin: 6
+  clock_speed: 20MHz
+  manual_ip:
+    static_ip: 192.168.178.115
+    gateway: 192.168.178.1
+    subnet: 255.255.255.0
+    dns1: 192.168.178.1
+
+time:
+  - platform: homeassistant
+    id: homeassistant_time
+     
+uart:
+  id: mod_bus
+  tx_pin: GPIO2
+  rx_pin: GPIO5
+  baud_rate: 9600
+  stop_bits: 1
+
+modbus:
+  id: baxi_esp_modbus
+#  flow_control_pin: 5
+ 
+modbus_controller:
+  - id: $devicename
+    address: 0x64
+    modbus_id: baxi_esp_modbus
+    setup_priority: -10
+    update_interval: "15s"
+    command_throttle: "50ms"
+
+
+
+##############################  ENTITIES  ##############################
+
+
+
+##############################  SENSORS  ###############################
+
+
+
+sensor:
+
+  - platform: modbus_controller                       #272 PowerActualReceived
+    modbus_controller_id: $devicename
+    name: "Potencia de Salida Real"   
+    address: 272
+    register_type: holding
+    value_type: U_WORD
+    unit_of_measurement: "%"
+    accuracy_decimals: 2
+    device_class: power_factor
+    state_class: measurement
+    filters:
+      - multiply:  1
+
+  - platform: modbus_controller                       #384 varApTOutside 
+    modbus_controller_id: $devicename
+    name: "AM027 T. Exterior"   
+    address: 384
+    register_type: holding
+    value_type: S_WORD
+    unit_of_measurement: "°C"
+    accuracy_decimals: 2
+    device_class: temperature
+    state_class: measurement
+    filters:
+      - multiply:  0.01
+
+  - platform: modbus_controller                       #403 varHpHeatPumpTF
+    modbus_controller_id: $devicename
+    name: "HM001 T. Ida Bomba"   
+    id: hm001_t_ida_bomba
+    address: 403
+    register_type: holding
+    value_type: S_WORD
+    unit_of_measurement: "°C"
+    accuracy_decimals: 2
+    device_class: temperature
+    state_class: measurement
+    filters:
+      - multiply:  0.01
+
+  - platform: modbus_controller                       #404 varHpHeatPumpTR
+    modbus_controller_id: $devicename
+    name: "HM002 T. Retorno Bomba"  
+    id: hm002_t_retorno_bomba
+    address: 404
+    register_type: holding
+    value_type: S_WORD
+    unit_of_measurement: "°C"
+    accuracy_decimals: 2
+    device_class: temperature
+    state_class: measurement
+    filters:
+      - multiply:  0.01
+
+  - platform: modbus_controller                       #405 varApInternalSetpoint
+    modbus_controller_id: $devicename
+    name: "AM101 Cons. Interna"   
+    address: 405
+    register_type: holding
+    value_type: U_WORD
+    unit_of_measurement: "°C"
+    accuracy_decimals: 2
+    device_class: temperature
+    state_class: measurement
+    filters:
+      - multiply:  0.01
+
+  - platform: modbus_controller                       #409 varApWaterPressure
+    modbus_controller_id: $devicename
+    name: "AM019 Presion de Agua"   
+    address: 409
+    register_type: holding
+    value_type: U_WORD
+    unit_of_measurement: "bar"
+    accuracy_decimals: 2
+    device_class: pressure
+    state_class: measurement
+    filters:
+      - multiply:  0.1
+
+  - platform: modbus_controller                       #410 varApFlowmeter
+    modbus_controller_id: $devicename
+    name: "AM056 Caudal"   
+    id: am056_caudal
+    address: 410
+    register_type: holding
+    value_type: U_WORD
+    unit_of_measurement: "L/min"
+    accuracy_decimals: 2
+    device_class: volume_flow_rate
+    state_class: measurement
+    filters:
+      - multiply:  0.01
+
+  - platform: modbus_controller                       #433 varApChEnergyConsumption
+    modbus_controller_id: $devicename
+    name: "AC005 Energia CC"   
+    address: 433
+    register_type: holding
+    value_type: U_DWORD
+    unit_of_measurement: "kWh"
+    accuracy_decimals: 2
+    device_class: energy
+    state_class: measurement
+    filters:
+      - multiply:  1
+
+  - platform: modbus_controller                       #435 varApDhwEnergyConsumption
+    modbus_controller_id: $devicename
+    name: "AC006 Energia ACS"   
+    address: 435
+    register_type: holding
+    value_type: U_DWORD
+    unit_of_measurement: "kWh"
+    accuracy_decimals: 2
+    device_class: energy
+    state_class: measurement
+    filters:
+      - multiply:  1
+
+  - platform: modbus_controller                       #437 varApCoolingEnergyConsumption
+    modbus_controller_id: $devicename
+    name: "AC007 Energia AACC"   
+    address: 437
+    register_type: holding
+    value_type: U_DWORD
+    unit_of_measurement: "kWh"
+    accuracy_decimals: 2
+    device_class: energy
+    state_class: measurement
+    filters:
+      - multiply:  1
+
+  - platform: modbus_controller                       #1104 varZoneTRoom
+    modbus_controller_id: $devicename
+    name: "CM030 T. Ambiente"   
+    id: cm030_t_ambiente
+    address: 1104
+    register_type: holding
+    value_type: S_WORD
+    unit_of_measurement: "°C"
+    accuracy_decimals: 1
+    device_class: temperature
+    state_class: measurement
+    filters:
+      - multiply:  0.1
+
+  - platform: modbus_controller                       #1631 varDhwTankTemperature
+    modbus_controller_id: $devicename
+    name: "DM001 T. Tanque ACS"   
+    id: dm001_t_tanque_acs
+    address: 1631
+    register_type: holding
+    value_type: S_WORD
+    unit_of_measurement: "°C"
+    accuracy_decimals: 2
+    device_class: temperature
+    state_class: measurement
+    filters:
+      - multiply:  0.01
+
+  - platform: template
+    name: "ΔT." 
+    unit_of_measurement: "°C"
+    accuracy_decimals: 2
+    device_class: temperature
+    state_class: measurement
+    lambda: |-
+      return (id(hm001_t_ida_bomba).state - id(hm002_t_retorno_bomba).state);
+
+  - platform: template
+    name: "Potencia Termica" 
+    unit_of_measurement: "W"
+    accuracy_decimals: 1
+    device_class: power
+    state_class: measurement
+    lambda: |-
+      return (id(am056_caudal).state * 60 * (id(hm001_t_ida_bomba).state - id(hm002_t_retorno_bomba).state) / 0.86);
+
+
+
+##############################  BINARY SENSORS  ########################
+
+
+
+binary_sensor:
+
+  - platform: modbus_controller                       #1110 varZonePumpRunning
+    modbus_controller_id: $devicename
+    name: "CM050 Bomba de CC"
+    address: 1110
+    register_type: holding
+
+
+
+##############################  SWITCH  ################################
+
+
+
+switch:
+
+  - platform: modbus_controller                       #500 parApChEnabled
+    modbus_controller_id: $devicename
+    name: "AP016 Habilitar Climatizacion"
+    id: ap016_habilitar_climatizacion
+    address: 500
+    register_type: holding
+    use_write_multiple: True
+    bitmask: 1
+    
+  - platform: modbus_controller                       #501 parApDhwEnabled
+    modbus_controller_id: $devicename
+    name: "AP017 Habilitar ACS"
+    id: ap017_habilitar_acs
+    address: 501
+    register_type: holding
+    use_write_multiple: True
+    bitmask: 1
+    
+  - platform: modbus_controller                       #503 parApCoolingForced
+    modbus_controller_id: $devicename
+    name: "AP015 Habilitar AACC"
+    id: ap015_habilitar_aacc
+    address: 503
+    register_type: holding
+    use_write_multiple: True
+    bitmask: 1
+    
+  - platform: modbus_controller                       #0 Heater DUMB
+    modbus_controller_id: $devicename
+    name: "Heater DUMB"
+    id: heater_dumb
+    address: 0
+    register_type: holding
+    use_write_multiple: True
+    bitmask: 0
+    
+  - platform: modbus_controller                       #0 Heater DUMB
+    modbus_controller_id: $devicename
+    name: "Cooler DUMB"
+    id: cooler_dumb
+    address: 0
+    register_type: holding
+    use_write_multiple: True
+    bitmask: 0
+
+
+
+##############################  NUMBER  ################################
+
+
+
+number:
+
+  - platform: modbus_controller                       #386 parApSummerWinter
+    modbus_controller_id: $devicename
+    name: "AP073 T.ext. Apagar CC"
+    address: 386
+    use_write_multiple: false
+    unit_of_measurement: "°C"
+    device_class: temperature
+    min_value: 15
+    max_value: 30.5
+    step: 0.5
+    value_type: U_WORD 
+    multiply: 100
+
+  - platform: modbus_controller                       #387 parApNeutralBandSummerWinter
+    modbus_controller_id: $devicename
+    name: "AP075 T.ext. Apagar AACC"
+    address: 387
+    use_write_multiple: false
+    unit_of_measurement: "°C"
+    device_class: temperature
+    min_value: 0
+    max_value: 10
+    step: 0.5
+    value_type: U_WORD 
+    multiply: 100
+
+  - platform: modbus_controller                       #388 parApNeutralBandSummerWinter
+    modbus_controller_id: $devicename
+    name: "AP080 T.ext. Antihielo"
+    address: 388
+    use_write_multiple: false
+    unit_of_measurement: "°C"
+    device_class: temperature
+    min_value: -30
+    max_value: 20
+    step: 0.5
+    value_type: S_WORD 
+    multiply: 100
+
+  - platform: modbus_controller                       #664 parZoneRoomManualSetpoint
+    modbus_controller_id: $devicename
+    name: "CP200 T.cons. Manual"
+    address: 664
+    use_write_multiple: false
+    unit_of_measurement: "°C"
+    device_class: temperature
+    min_value: 5
+    max_value: 30
+    step: 0.5
+    value_type: U_WORD 
+    multiply: 10
+
+  - platform: modbus_controller                       #672 parZoneTFlowSetpointMax
+    modbus_controller_id: $devicename
+    name: "CP000 T.cons. Ida"
+    address: 672
+    use_write_multiple: false
+    unit_of_measurement: "°C"
+    device_class: temperature
+    min_value: 7
+    max_value: 100
+    step: 0.5
+    value_type: U_WORD 
+    multiply: 100
+
+  - platform: modbus_controller                       #673 parZoneTFlowCoolingMixingSetpoint
+    modbus_controller_id: $devicename
+    name: "CP270 T.cons. AACC"
+    address: 673
+    use_write_multiple: false
+    unit_of_measurement: "°C"
+    device_class: temperature
+    min_value: 11
+    max_value: 23
+    step: 0.5
+    value_type: U_WORD 
+    multiply: 100
+
+  - platform: modbus_controller                       #674 parZoneSlope
+    modbus_controller_id: $devicename
+    name: "CP230 Pendiente Curva"
+    address: 674
+    use_write_multiple: false
+    min_value: 0
+    max_value: 4
+    step: 0.1
+    value_type: U_WORD 
+    multiply: 10
+
+  - platform: modbus_controller                       #675 parZoneHCZPD
+    modbus_controller_id: $devicename
+    name: "CP210 T. Pie Curva"
+    address: 675
+    use_write_multiple: false
+    unit_of_measurement: "°C"
+    device_class: temperature
+    min_value: 15
+    max_value: 90
+    step: 0.5
+    value_type: U_WORD 
+    multiply: 10
+
+  - platform: modbus_controller                       #687 parZonePumpPostRun
+    modbus_controller_id: $devicename
+    name: "CP040 Postfuncionamiento Bomba"
+    address: 687
+    use_write_multiple: false
+    unit_of_measurement: "min"
+    min_value: 0
+    max_value: 20
+    value_type: U_WORD 
+    multiply: 1
+
+  - platform: modbus_controller                       #1177 parZoneDhwComfortSetpoint
+    modbus_controller_id: $devicename
+    name: "DP070 T.cons. ACS"
+    address: 1177
+    use_write_multiple: false
+    unit_of_measurement: "°C"
+    device_class: temperature
+    min_value: 40
+    max_value: 65
+    step: 0.5
+    value_type: U_WORD 
+    multiply: 100
+
+  - platform: modbus_controller                       #1198 parZoneDhwCalorifierHysterisis
+    modbus_controller_id: $devicename
+    name: "DP120 Histeresis ACS"
+    address: 1198
+    use_write_multiple: false
+    unit_of_measurement: "°C"
+    device_class: temperature
+    min_value: 0
+    max_value: 40
+    step: 0.5
+    value_type: U_WORD 
+    multiply: 100
+
+
+
+##############################  SELECT  ################################
+
+
+
+select:
+
+  - platform: modbus_controller                       #649 parZoneMode 1
+    modbus_controller_id: $devicename
+    name: "CP320 Modo de Climatizacion"
+    address: 649
+    use_write_multiple: false
+    value_type: U_WORD
+    optionsmap:
+      "Programacion": 0
+      "Modo Manual": 1
+      "Antiescarcha": 2
+    skip_updates: 2
+
+  - platform: modbus_controller                       #1161 parZoneMode 2
+    modbus_controller_id: $devicename
+    name: "CP320 Modo ACS"
+    address: 1161
+    use_write_multiple: True
+    value_type: U_WORD
+    optionsmap:
+      "Programacion": 0
+      "Modo Manual": 1
+      "Antiescarcha": 2
+    skip_updates: 2
+  
+
+
+##############################  TEXT SENSOR  ###########################
+
+
+
+text_sensor:
+
+  - platform: modbus_controller                       #279 ApplianceStatus1 
+    modbus_controller_id: $devicename
+    name: "Estado Aparato 1"
+    address: 279
+    register_type: holding
+    bitmask: 1
+    raw_encode: HEXBYTES
+    lambda: |-
+      uint8_t value = modbus_controller::word_from_hex_str(x, 0);
+      switch (value) {
+        case 0: return std::string("Demanda de Apoyo Hidraulico Encendido");
+        case 1: return std::string("Bomba de Calor Encendida");
+        case 2: return std::string("Respaldo Electrico, Etapa 1 Encendido");
+        case 3: return std::string("Respaldo Electrico, Etapa 2 Encendido");
+        case 4: return std::string("Respaldo Electrico ACS Encendido");
+        case 5: return std::string("Servicio Necesario");
+        case 6: return std::string("Reinicio Necesario");
+        case 7: return std::string("Presion de Agua Baja");
+        default: return std::string("Desconocido");
+      }
+      return x;
+
+  - platform: modbus_controller                       #280 ApplianceStatus2
+    modbus_controller_id: $devicename
+    name: "Estado Aparato 2"
+    address: 280
+    register_type: holding
+    bitmask: 1
+    raw_encode: HEXBYTES
+    lambda: |-
+      uint8_t value = modbus_controller::word_from_hex_str(x, 0);
+      switch (value) {
+        case 0: return std::string("Bomba");
+        case 1: return std::string("V3V Abierta");
+        case 2: return std::string("V3V");
+        case 3: return std::string("V3V Cerrada");
+        case 4: return std::string("ACS Activa");
+        case 5: return std::string("Ch Activa");
+        case 6: return std::string("Refrigeracion Activa");
+        default: return std::string("Desconocido");
+      }
+      return x;
+
+  - platform: modbus_controller                       #411 varApStatus
+    modbus_controller_id: $devicename
+    name: "AM012 Estado"
+    address: 411
+    register_type: holding
+    bitmask: 1
+    raw_encode: HEXBYTES
+    lambda: |-
+      uint8_t value = modbus_controller::word_from_hex_str(x, 0);
+      switch (value) {
+        case 0: return std::string("En Espera");
+        case 1: return std::string("Demanda Calor");
+        case 3: return std::string("Calentando CC");
+        case 4: return std::string("Calentando ACS");
+        case 6: return std::string("Postcirculacion Bomba");
+        case 7: return std::string("Refrigeracion Activa");
+        case 8: return std::string("Parada Controlada");
+        case 9: return std::string("Bloqueado");
+        case 10: return std::string("Bloqueo Temporal");
+        case 11: return std::string("Test Carga Minima");
+        case 12: return std::string("Test Carga Maxima");
+        case 16: return std::string("Proteccion Antiheladas");
+        case 17: return std::string("Purgado");
+        default: return std::string("Desconocido");
+      }
+      return x;
+
+  - platform: modbus_controller                       #412 varApSubStatus
+    modbus_controller_id: $devicename
+    name: "AM014 Subestado"
+    address: 412
+    register_type: holding
+    bitmask: 1
+    raw_encode: HEXBYTES
+    lambda: |-
+      uint8_t value = modbus_controller::word_from_hex_str(x, 0);
+      switch (value) {
+        case 0: return std::string("Parado");
+        case 1: return std::string("Ciclo Anticorto");
+        case 2: return std::string("Cambio de Valvula a CC");
+        case 3: return std::string("Alimentacion de Bomba del Sistema Hibrido");
+        case 4: return std::string("Condiciones de Arranque Pendientes en Bomba y Respaldo");
+        case 30: return std::string("Funcionamiento Normal");
+        case 31: return std::string("Punto de Consigna Interno Limitado");
+        case 60: return std::string("Posfuncionamiento de Bomba");
+        case 62: return std::string("Cambio de V3V a ACS");
+        case 65: return std::string("Derivacion del Compresor");
+        case 66: return std::string("Temp. Superior a temp. Maxima de Funcionamiento del Compresor");
+        case 67: return std::string("Temp. Exterior Inferior a Temp. Maxima de Funcionamiento del Compresor");
+        case 68: return std::string("El Funcionamiento Hibrido Solicita Desactivacion del Compresor");
+        case 69: return std::string("Deshielo en Curso");
+        case 70: return std::string("No se reunen las Condiciones para Deshielo");
+        case 71: return std::string("Deshielo en Curso");
+        case 75: return std::string("Apagado del Compresor por Condensacion");
+        case 78: return std::string("Correccion del Punto de Consigna de Temp.");
+        case 82: return std::string("Temp. Inferior a Temp. Minima de Refrigeracion");
+        case 88: return std::string("BL-Respaldo Limitado");
+        case 89: return std::string("BL-Bomba Limitada");
+        case 90: return std::string("BL-Bomba y Respaldo Limitados");
+        case 91: return std::string("BL-Tarifa Reducida");
+        case 92: return std::string("PV-con Bomba de Calor");
+        case 93: return std::string("PV-con Bomba de Calor y Respaldo");
+        case 94: return std::string("BL-Red Electrica Inteligente");
+        default: return std::string("Desconocido");
+      }
+      return x;
+
+  - platform: modbus_controller                       #1109 varZoneCurrentHeatingMode
+    modbus_controller_id: $devicename
+    name: "CM130 Actividad Climatizacion"
+    address: 1109
+    register_type: holding
+    bitmask: 1
+    raw_encode: HEXBYTES
+    lambda: |-
+      uint8_t value = modbus_controller::word_from_hex_str(x, 0);
+      switch (value) {
+        case 0: return std::string("Off");
+        case 1: return std::string("Calefaccion");
+        case 2: return std::string("AACC");
+        default: return std::string("Desconocido");
+      }
+      return x;
+
+  - platform: modbus_controller                       #1619 varZoneCurrentActivities 2
+    modbus_controller_id: $devicename
+    name: "CM130 Actividad ACS "
+    address: 1619
+    register_type: holding
+    bitmask: 1
+    raw_encode: HEXBYTES
+    lambda: |-
+      uint8_t value = modbus_controller::word_from_hex_str(x, 0);
+      switch (value) {
+        case 0: return std::string("Antiescarcha");
+        case 1: return std::string("ECO");
+        case 2: return std::string("Confort");
+        case 3: return std::string("Antilegionella");
+        default: return std::string("Desconocido");
+      }
+      return x;
+
+
+
+##############################  END  ###################################
