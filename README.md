@@ -14,6 +14,17 @@ Over time we will complete it more.
 
 Thanks!
 
+# Version 0.2:
+The idea is to use both the DHW and the Air Conditioning in manual mode, and use the Home Assistant scheduler to make programs, raise and lower the temperatures...
+
+So I have changed the yaml to the minimum parameters that I think are interesting and I have configured a new dashboard.
+The next thing will be to create 2 climate entities, one for the air conditioning and the other for the DHW.
+
+
+Thank you!
+
+######################
+
 # New version 1.0:
 I have made the jump to version 1.0 because I think the system is already finished (except for small errors).
 
@@ -39,17 +50,6 @@ The climates working:
 
 [![IMAGE ALT TEXT HERE](https://img.youtube.com/vi/U0JB0XBZ2y4/0.jpg)](https://www.youtube.com/watch?v=U0JB0XBZ2y4)
 
-
-
-Thank you!
-
-######################
-
-# New version 0.2:
-The idea is to use both the DHW and the Air Conditioning in manual mode, and use the Home Assistant scheduler to make programs, raise and lower the temperatures...
-
-So I have changed the yaml to the minimum parameters that I think are interesting and I have configured a new dashboard.
-The next thing will be to create 2 climate entities, one for the air conditioning and the other for the DHW.
 
 
 Thank you!
