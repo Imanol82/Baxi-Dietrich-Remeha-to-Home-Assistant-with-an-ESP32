@@ -23,6 +23,7 @@ What has changed in this version:
 - The code has been divided into several files.
 
 How I intend to use it:
+
 The Baxi system will always be in manual mode.
 Using the Home Assistant scheduler addon, I will schedule when I want the system to turn on or off or when I want the temperature to change.
 
