@@ -28,77 +28,96 @@
       data:
         temperature: "{{ states('number.dp070_t_cons_acs') | float }}"
 
-- alias: "Sync ACS HVAC Mode with Switch"
-  mode: single
+- alias: Sync ACS HVAC Mode and Switch
+  mode: restart
   trigger:
     - platform: state
       entity_id: switch.ap017_habilitar_acs
-  action:
-    - service: climate.set_hvac_mode
-      target:
-        entity_id: climate.acs
-      data:
-        hvac_mode: >-
-          {% if is_state('switch.ap017_habilitar_acs', 'on') %}
-            heat
-          {% else %}
-            off
-          {% endif %}
-
-- alias: "Sync Switch with ACS HVAC Mode"
-  mode: single
-  trigger:
     - platform: state
       entity_id: climate.acs
-      attribute: hvac_action
   action:
     - choose:
+        # Caso 1: Cuando el switch cambia a ON y el clima no está en heat
         - conditions:
             - condition: template
-              value_template: "{{ state_attr('climate.acs', 'hvac_action') == 'heating' }}"
+              value_template: "{{ trigger.entity_id == 'switch.ap017_habilitar_acs' and trigger.to_state.state == 'on' and not is_state('climate.acs', 'heat') }}"
+          sequence:
+            - service: climate.set_hvac_mode
+              target:
+                entity_id: climate.acs
+              data:
+                hvac_mode: heat
+                
+        # Caso 2: Cuando el switch cambia a OFF y el clima no está en off
+        - conditions:
+            - condition: template
+              value_template: "{{ trigger.entity_id == 'switch.ap017_habilitar_acs' and trigger.to_state.state == 'off' and not is_state('climate.acs', 'off') }}"
+          sequence:
+            - service: climate.set_hvac_mode
+              target:
+                entity_id: climate.acs
+              data:
+                hvac_mode: "off"
+                
+        # Caso 3: Cuando el clima cambia a heat y el switch está OFF
+        - conditions:
+            - condition: template
+              value_template: "{{ trigger.entity_id == 'climate.acs' and is_state('climate.acs', 'heat') and is_state('switch.ap017_habilitar_acs', 'off') }}"
           sequence:
             - service: switch.turn_on
               target:
                 entity_id: switch.ap017_habilitar_acs
+                
+        # Caso 4: Cuando el clima cambia a off y el switch está ON
         - conditions:
             - condition: template
-              value_template: "{{ state_attr('climate.acs', 'hvac_action') == 'off' }}"
+              value_template: "{{ trigger.entity_id == 'climate.acs' and is_state('climate.acs', 'off') and is_state('switch.ap017_habilitar_acs', 'on') }}"
           sequence:
             - service: switch.turn_off
               target:
                 entity_id: switch.ap017_habilitar_acs
 
-- alias: "Sync ACS target_temp with dp070_t_cons_acs"
-  mode: single
+- alias: Sync ACS Temperature with dp070_t_cons_acs
+  mode: restart
   trigger:
     - platform: state
       entity_id: number.dp070_t_cons_acs
-  action:
-    - service: climate.set_temperature
-      target:
-        entity_id: climate.acs
-      data:
-        temperature: "{{ states('number.dp070_t_cons_acs') | float }}"
-
-- alias: "Sync ACS dp070_t_cons_acs with target_temp"
-  mode: single
-  trigger:
     - platform: state
       entity_id: climate.acs
       attribute: temperature
-  condition:
-    - condition: template
-      value_template: >
-        {% set climate_temp = state_attr('climate.acs', 'temperature') | float %}
-        {% set number_temp = states('number.dp070_t_cons_acs') | float %}
-        {{ climate_temp != number_temp }}
   action:
-    - service: number.set_value
-      target:
-        entity_id: number.dp070_t_cons_acs
-      data:
-        value: "{{ state_attr('climate.acs', 'temperature') }}"
-
+    - choose:
+        # Caso 1: Cuando cambia number.dp070_t_cons_acs, actualizar climate.acs
+        - conditions:
+            - condition: template
+              value_template: "{{ trigger.entity_id == 'number.dp070_t_cons_acs' }}"
+            - condition: template
+              value_template: >
+                {% set number_temp = states('number.dp070_t_cons_acs') | float %}
+                {% set climate_temp = state_attr('climate.acs', 'temperature') | float(0) %}
+                {{ number_temp != climate_temp }}
+          sequence:
+            - service: climate.set_temperature
+              target:
+                entity_id: climate.acs
+              data:
+                temperature: "{{ states('number.dp070_t_cons_acs') | float }}"
+                
+        # Caso 2: Cuando cambia el atributo temperature de climate.acs, actualizar number.dp070_t_cons_acs
+        - conditions:
+            - condition: template
+              value_template: "{{ trigger.entity_id == 'climate.acs' }}"
+            - condition: template
+              value_template: >
+                {% set climate_temp = state_attr('climate.acs', 'temperature') | float(0) %}
+                {% set number_temp = states('number.dp070_t_cons_acs') | float %}
+                {{ climate_temp != number_temp }}
+          sequence:
+            - service: number.set_value
+              target:
+                entity_id: number.dp070_t_cons_acs
+              data:
+                value: "{{ state_attr('climate.acs', 'temperature') }}"
 
 
 ######## Climatizacion Dual Mode Thermostat ########
@@ -131,40 +150,50 @@
       data:
         temperature: "{{ states('number.cp200_t_cons_manual') | float }}"
 
-- alias: "Sync Climatizacion HVAC Mode with Switches"
-  mode: single
+- alias: Sync Climatizacion with Switches
+  mode: restart
   trigger:
     - platform: state
       entity_id:
         - switch.ap015_habilitar_aacc
         - switch.ap016_habilitar_climatizacion
-  action:
-    - service: climate.set_hvac_mode
-      target:
-        entity_id: climate.climatizacion
-      data:
-        hvac_mode: >-
-          {% if is_state('switch.ap016_habilitar_climatizacion', 'on') %}
-            {% if is_state('switch.ap015_habilitar_aacc', 'on') %}
-              cool
-            {% else %}
-              heat
-            {% endif %}
-          {% else %}
-            off
-          {% endif %}
-
-- alias: "Sync Switches with Climatizacion HVAC Mode"
-  mode: single
-  trigger:
     - platform: state
       entity_id: climate.climatizacion
-      attribute: hvac_action
   action:
     - choose:
+        # Caso 1: Cuando cambian los switches, actualizar el modo HVAC de climatizacion
         - conditions:
             - condition: template
-              value_template: "{{ state_attr('climate.climatizacion', 'hvac_action') == 'heating' }}"
+              value_template: >
+                {{ trigger.entity_id == 'switch.ap015_habilitar_aacc' or trigger.entity_id == 'switch.ap016_habilitar_climatizacion' }}
+          sequence:
+            - service: climate.set_hvac_mode
+              target:
+                entity_id: climate.climatizacion
+              data:
+                hvac_mode: >-
+                  {% if is_state('switch.ap016_habilitar_climatizacion', 'on') %}
+                    {% if is_state('switch.ap015_habilitar_aacc', 'on') %}
+                      cool
+                    {% else %}
+                      heat
+                    {% endif %}
+                  {% else %}
+                    off
+                  {% endif %}
+        
+        # Caso 2: Cuando hvac_mode es 'heat', activar climatización y desactivar AACC
+        - conditions:
+            - condition: template
+              value_template: "{{ trigger.entity_id == 'climate.climatizacion' and is_state('climate.climatizacion', 'heat') }}"
+            - condition: or
+              conditions:
+                - condition: state
+                  entity_id: switch.ap016_habilitar_climatizacion
+                  state: 'off'
+                - condition: state
+                  entity_id: switch.ap015_habilitar_aacc
+                  state: 'on'
           sequence:
             - service: switch.turn_on
               target:
@@ -177,9 +206,19 @@
                 entity_id: climate.climatizacion
               data:
                 temperature: "{{ states('number.cp200_t_cons_manual') | float }}"
+        
+        # Caso 3: Cuando hvac_mode es 'cool', activar climatización y AACC
         - conditions:
             - condition: template
-              value_template: "{{ state_attr('climate.climatizacion', 'hvac_action') == 'cooling' }}"
+              value_template: "{{ trigger.entity_id == 'climate.climatizacion' and is_state('climate.climatizacion', 'cool') }}"
+            - condition: or
+              conditions:
+                - condition: state
+                  entity_id: switch.ap016_habilitar_climatizacion
+                  state: 'off'
+                - condition: state
+                  entity_id: switch.ap015_habilitar_aacc
+                  state: 'off'
           sequence:
             - service: switch.turn_on
               target:
@@ -192,9 +231,19 @@
                 entity_id: climate.climatizacion
               data:
                 temperature: "{{ states('number.cp200_t_cons_manual') | float }}"
+        
+        # Caso 4: Cuando hvac_mode es 'off', desactivar ambos switches
         - conditions:
             - condition: template
-              value_template: "{{ state_attr('climate.climatizacion', 'hvac_action') == 'off' }}"
+              value_template: "{{ trigger.entity_id == 'climate.climatizacion' and is_state('climate.climatizacion', 'off') }}"
+            - condition: or
+              conditions:
+                - condition: state
+                  entity_id: switch.ap016_habilitar_climatizacion
+                  state: 'on'
+                - condition: state
+                  entity_id: switch.ap015_habilitar_aacc
+                  state: 'on'
           sequence:
             - service: switch.turn_off
               target:
@@ -203,36 +252,47 @@
               target:
                 entity_id: switch.ap015_habilitar_aacc
 
-- alias: "Sync Climatizacion target_temp with cp200_t_cons_manual"
-  mode: single
+- alias: Sync Climatizacion Temperature with cp200_t_cons_manual
+  mode: restart
   trigger:
     - platform: state
       entity_id: number.cp200_t_cons_manual
-  action:
-    - service: climate.set_temperature
-      target:
-        entity_id: climate.climatizacion
-      data:
-        temperature: "{{ states('number.cp200_t_cons_manual') | float }}"
-
-- alias: "Sync cp200_t_cons_manual with Climatizacion target_temp"
-  mode: single
-  trigger:
     - platform: state
       entity_id: climate.climatizacion
       attribute: temperature
-  condition:
-    - condition: template
-      value_template: >
-        {% set climate_temp = state_attr('climate.climatizacion', 'temperature') | float %}
-        {% set number_temp = states('number.cp200_t_cons_manual') | float %}
-        {{ climate_temp != number_temp }}
   action:
-    - service: number.set_value
-      target:
-        entity_id: number.cp200_t_cons_manual
-      data:
-        value: "{{ state_attr('climate.climatizacion', 'temperature') }}"
+    - choose:
+        # Caso 1: Cuando cambia number.cp200_t_cons_manual, actualizar climate.climatizacion
+        - conditions:
+            - condition: template
+              value_template: "{{ trigger.entity_id == 'number.cp200_t_cons_manual' }}"
+            - condition: template
+              value_template: >
+                {% set number_temp = states('number.cp200_t_cons_manual') | float %}
+                {% set climate_temp = state_attr('climate.climatizacion', 'temperature') | float(0) %}
+                {{ number_temp != climate_temp }}
+          sequence:
+            - service: climate.set_temperature
+              target:
+                entity_id: climate.climatizacion
+              data:
+                temperature: "{{ states('number.cp200_t_cons_manual') | float }}"
+                
+        # Caso 2: Cuando cambia el atributo temperature de climate.climatizacion, actualizar number.cp200_t_cons_manual
+        - conditions:
+            - condition: template
+              value_template: "{{ trigger.entity_id == 'climate.climatizacion' }}"
+            - condition: template
+              value_template: >
+                {% set climate_temp = state_attr('climate.climatizacion', 'temperature') | float(0) %}
+                {% set number_temp = states('number.cp200_t_cons_manual') | float %}
+                {{ climate_temp != number_temp }}
+          sequence:
+            - service: number.set_value
+              target:
+                entity_id: number.cp200_t_cons_manual
+              data:
+                value: "{{ state_attr('climate.climatizacion', 'temperature') }}"
 
 
 
