@@ -1,7 +1,5 @@
-automation: !include automations.yaml
 template: !include template.yaml
 climate: !include climate.yaml
-switch: !include switch.yaml
 
 
 
