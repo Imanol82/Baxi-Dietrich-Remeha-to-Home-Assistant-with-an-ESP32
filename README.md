@@ -60,6 +60,35 @@ Thank you!
 
 -----------------------------------------------------------------------------------------------------------------------------------
 
+# Version 2.0:
+
+The climate entities for ACS (DHW) and Climatización (Heating/Cooling) have been rebuilt using
+[climate_template](https://github.com/jcwillox/hass-template-climate) instead of `generic_thermostat` /
+`dualmode_generic`.
+
+Why: `generic_thermostat` and `dualmode_generic` keep their own internal state (mode, target temperature),
+completely decoupled from the real switches/numbers exposed by the ESP32. That forced 6 automations just
+to keep both sides in sync (initial state on HA start + two-way sync for mode + two-way sync for
+temperature), which was fragile and added a fixed delay on startup.
+
+With `climate_template` the climate entity has no state of its own: its mode and temperature are templates
+that read directly from `switch.ap017_habilitar_acs` / `number.dp070_t_cons_acs` (and the equivalent AACC
+entities), and its actions call those same entities directly. No sync automations needed anymore, no
+startup delay, and it can never drift out of sync.
+
+What changed:
+- `automations.yaml`: removed entirely (all 6 sync automations are no longer needed).
+- `climate.yaml`: replaced `generic_thermostat`/`dualmode_generic` with `climate_template`.
+- `switch.yaml`: removed — `acs_control` and `climatizacion_control` are now redundant.
+- Requires the [climate_template](https://github.com/jcwillox/hass-template-climate) custom component via HACS.
+
+Big thanks to [@jcwillox](https://github.com/jcwillox) for building and maintaining `climate_template` —
+it's a fantastic component and it made this whole cleanup possible!
+
+
+
+-----------------------------------------------------------------------------------------------------------------------------------
+
 # Installation:
 
 First of all you need a GTW-08 gateway to convert the RBus signal to Modbus:
