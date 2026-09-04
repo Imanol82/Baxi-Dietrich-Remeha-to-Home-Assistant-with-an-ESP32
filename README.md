@@ -786,255 +786,8 @@ text_sensor:
 
 # - configuration.yaml:
 ```
-automation: !include automations.yaml
 template: !include template.yaml
 climate: !include climate.yaml
-switch: !include switch.yaml
-```
------------------------------------------------------------------------------------------------------------------------------------
-
-# - automations.yaml
-```
-##############################  CLIMATES BAXI ACS Y CLIMATIZACION  ##############################
-
-
-
-######## ACS Thermostat ########
-
-
-- alias: "Set Initial ACS HVAC Mode and Temperature"
-  mode: single
-  trigger:
-    - platform: homeassistant
-      event: start
-  action:
-    - delay: "00:00:10"
-    - service: climate.set_hvac_mode
-      target:
-        entity_id: climate.acs
-      data:
-        hvac_mode: >-
-          {% if is_state('switch.ap017_habilitar_acs', 'on') %}
-            heat
-          {% else %}
-            off
-          {% endif %}
-    - service: climate.set_temperature
-      target:
-        entity_id: climate.acs
-      data:
-        temperature: "{{ states('number.dp070_t_cons_acs') | float }}"
-
-- alias: "Sync ACS HVAC Mode with Switch"
-  mode: single
-  trigger:
-    - platform: state
-      entity_id: switch.ap017_habilitar_acs
-  action:
-    - service: climate.set_hvac_mode
-      target:
-        entity_id: climate.acs
-      data:
-        hvac_mode: >-
-          {% if is_state('switch.ap017_habilitar_acs', 'on') %}
-            heat
-          {% else %}
-            off
-          {% endif %}
-
-- alias: "Sync Switch with ACS HVAC Mode"
-  mode: single
-  trigger:
-    - platform: state
-      entity_id: climate.acs
-      attribute: hvac_action
-  action:
-    - choose:
-        - conditions:
-            - condition: template
-              value_template: "{{ state_attr('climate.acs', 'hvac_action') == 'heating' }}"
-          sequence:
-            - service: switch.turn_on
-              target:
-                entity_id: switch.ap017_habilitar_acs
-        - conditions:
-            - condition: template
-              value_template: "{{ state_attr('climate.acs', 'hvac_action') == 'off' }}"
-          sequence:
-            - service: switch.turn_off
-              target:
-                entity_id: switch.ap017_habilitar_acs
-
-- alias: "Sync ACS target_temp with dp070_t_cons_acs"
-  mode: single
-  trigger:
-    - platform: state
-      entity_id: number.dp070_t_cons_acs
-  action:
-    - service: climate.set_temperature
-      target:
-        entity_id: climate.acs
-      data:
-        temperature: "{{ states('number.dp070_t_cons_acs') | float }}"
-
-- alias: "Sync ACS dp070_t_cons_acs with target_temp"
-  mode: single
-  trigger:
-    - platform: state
-      entity_id: climate.acs
-      attribute: temperature
-  condition:
-    - condition: template
-      value_template: >
-        {% set climate_temp = state_attr('climate.acs', 'temperature') | float %}
-        {% set number_temp = states('number.dp070_t_cons_acs') | float %}
-        {{ climate_temp != number_temp }}
-  action:
-    - service: number.set_value
-      target:
-        entity_id: number.dp070_t_cons_acs
-      data:
-        value: "{{ state_attr('climate.acs', 'temperature') }}"
-
-
-
-######## Climatizacion Dual Mode Thermostat ########
-
-
-- alias: "Set Initial Climatizacion HVAC Mode and Temperature"
-  mode: single
-  trigger:
-    - platform: homeassistant
-      event: start
-  action:
-    - delay: "00:00:10"
-    - service: climate.set_hvac_mode
-      target:
-        entity_id: climate.climatizacion
-      data:
-        hvac_mode: >-
-          {% if is_state('switch.ap016_habilitar_climatizacion', 'on') %}
-            {% if is_state('switch.ap015_habilitar_aacc', 'on') %}
-              cool
-            {% else %}
-              heat
-            {% endif %}
-          {% else %}
-            off
-          {% endif %}
-    - service: climate.set_temperature
-      target:
-        entity_id: climate.climatizacion
-      data:
-        temperature: "{{ states('number.cp200_t_cons_manual') | float }}"
-
-- alias: "Sync Climatizacion HVAC Mode with Switches"
-  mode: single
-  trigger:
-    - platform: state
-      entity_id:
-        - switch.ap015_habilitar_aacc
-        - switch.ap016_habilitar_climatizacion
-  action:
-    - service: climate.set_hvac_mode
-      target:
-        entity_id: climate.climatizacion
-      data:
-        hvac_mode: >-
-          {% if is_state('switch.ap016_habilitar_climatizacion', 'on') %}
-            {% if is_state('switch.ap015_habilitar_aacc', 'on') %}
-              cool
-            {% else %}
-              heat
-            {% endif %}
-          {% else %}
-            off
-          {% endif %}
-
-- alias: "Sync Switches with Climatizacion HVAC Mode"
-  mode: single
-  trigger:
-    - platform: state
-      entity_id: climate.climatizacion
-      attribute: hvac_action
-  action:
-    - choose:
-        - conditions:
-            - condition: template
-              value_template: "{{ state_attr('climate.climatizacion', 'hvac_action') == 'heating' }}"
-          sequence:
-            - service: switch.turn_on
-              target:
-                entity_id: switch.ap016_habilitar_climatizacion
-            - service: switch.turn_off
-              target:
-                entity_id: switch.ap015_habilitar_aacc
-            - service: climate.set_temperature
-              target:
-                entity_id: climate.climatizacion
-              data:
-                temperature: "{{ states('number.cp200_t_cons_manual') | float }}"
-        - conditions:
-            - condition: template
-              value_template: "{{ state_attr('climate.climatizacion', 'hvac_action') == 'cooling' }}"
-          sequence:
-            - service: switch.turn_on
-              target:
-                entity_id: switch.ap016_habilitar_climatizacion
-            - service: switch.turn_on
-              target:
-                entity_id: switch.ap015_habilitar_aacc
-            - service: climate.set_temperature
-              target:
-                entity_id: climate.climatizacion
-              data:
-                temperature: "{{ states('number.cp200_t_cons_manual') | float }}"
-        - conditions:
-            - condition: template
-              value_template: "{{ state_attr('climate.climatizacion', 'hvac_action') == 'off' }}"
-          sequence:
-            - service: switch.turn_off
-              target:
-                entity_id: switch.ap016_habilitar_climatizacion
-            - service: switch.turn_off
-              target:
-                entity_id: switch.ap015_habilitar_aacc
-
-- alias: "Sync Climatizacion target_temp with cp200_t_cons_manual"
-  mode: single
-  trigger:
-    - platform: state
-      entity_id: number.cp200_t_cons_manual
-  action:
-    - service: climate.set_temperature
-      target:
-        entity_id: climate.climatizacion
-      data:
-        temperature: "{{ states('number.cp200_t_cons_manual') | float }}"
-
-- alias: "Sync cp200_t_cons_manual with Climatizacion target_temp"
-  mode: single
-  trigger:
-    - platform: state
-      entity_id: climate.climatizacion
-      attribute: temperature
-  condition:
-    - condition: template
-      value_template: >
-        {% set climate_temp = state_attr('climate.climatizacion', 'temperature') | float %}
-        {% set number_temp = states('number.cp200_t_cons_manual') | float %}
-        {{ climate_temp != number_temp }}
-  action:
-    - service: number.set_value
-      target:
-        entity_id: number.cp200_t_cons_manual
-      data:
-        value: "{{ state_attr('climate.climatizacion', 'temperature') }}"
-
-
-
-##############################  END  ##############################
-
 ```
 -----------------------------------------------------------------------------------------------------------------------------------
 
@@ -1060,146 +813,104 @@ switch: !include switch.yaml
 ```
 ##############################  CLIMATES BAXI ACS Y CLIMATIZACION  ##############################
 
+######## ACS Thermostat (climate_template) ########
 
-
-######## ACS Thermostat ########
-
-
-- platform: generic_thermostat
+- platform: climate_template
   name: "ACS"
-  unique_id: climate.acs
-  heater: switch.heater_dumb
-  target_sensor: sensor.dm001_t_tanque_acs
+  unique_id: acs_climate_template
+  modes:
+    - "off"
+    - "heat"
   min_temp: 40
   max_temp: 65
-  ac_mode: false
-  target_temp_step: 0.5
-  min_cycle_duration:
-    seconds: 5
-  keep_alive:
-    minutes: 3
+  temp_step: 0.5
   precision: 0.1
+  current_temperature_template: "{{ states('sensor.dm001_t_tanque_acs') | float(0) }}"
+  target_temperature_template: "{{ states('number.dp070_t_cons_acs') | float(0) }}"
+  hvac_mode_template: >
+    {% if is_state('switch.ap017_habilitar_acs', 'on') %}
+      heat
+    {% else %}
+      off
+    {% endif %}
+  set_temperature:
+    - action: number.set_value
+      target:
+        entity_id: number.dp070_t_cons_acs
+      data:
+        value: "{{ temperature }}"
+  set_hvac_mode:
+    - choose:
+        - conditions: "{{ hvac_mode == 'heat' }}"
+          sequence:
+            - action: switch.turn_on
+              target:
+                entity_id: switch.ap017_habilitar_acs
+        - conditions: "{{ hvac_mode == 'off' }}"
+          sequence:
+            - action: switch.turn_off
+              target:
+                entity_id: switch.ap017_habilitar_acs
 
+######## Climatizacion (climate_template) ########
 
-
-######## Climatizacion Dual Mode Thermostat ########
-
-
-- platform: dualmode_generic
-  name: "Climatizacion"
-  unique_id: climate.climatizacion
-  heater: switch.heater_dumb
-  cooler: switch.cooler_dumb
-  target_sensor: sensor.cm030_t_ambiente
+- platform: climate_template
+  name: "Climatización"
+  unique_id: climatizacion_climate_template
+  modes:
+    - "off"
+    - "heat"
+    - "cool"
   min_temp: 5
   max_temp: 30
-  target_temp_step: 0.5
-  min_cycle_duration:
-    seconds: 5
-  keep_alive:
-    minutes: 3
+  temp_step: 0.5
   precision: 0.1
-
-
+  current_temperature_template: "{{ states('sensor.cm030_t_ambiente') | float(0) }}"
+  target_temperature_template: "{{ states('number.cp200_t_cons_manual') | float(0) }}"
+  hvac_mode_template: >
+    {% if is_state('switch.ap016_habilitar_climatizacion', 'off') %}
+      off
+    {% elif is_state('switch.ap015_habilitar_aacc', 'on') %}
+      cool
+    {% else %}
+      heat
+    {% endif %}
+  set_temperature:
+    - action: number.set_value
+      target:
+        entity_id: number.cp200_t_cons_manual
+      data:
+        value: "{{ temperature }}"
+  set_hvac_mode:
+    - choose:
+        - conditions: "{{ hvac_mode == 'off' }}"
+          sequence:
+            - action: switch.turn_off
+              target:
+                entity_id:
+                  - switch.ap016_habilitar_climatizacion
+                  - switch.ap015_habilitar_aacc
+        - conditions: "{{ hvac_mode == 'heat' }}"
+          sequence:
+            - action: switch.turn_on
+              target:
+                entity_id: switch.ap016_habilitar_climatizacion
+            - action: switch.turn_off
+              target:
+                entity_id: switch.ap015_habilitar_aacc
+        - conditions: "{{ hvac_mode == 'cool' }}"
+          sequence:
+            - action: switch.turn_on
+              target:
+                entity_id:
+                  - switch.ap016_habilitar_climatizacion
+                  - switch.ap015_habilitar_aacc
 
 ##############################  END  ##############################
 
 ```
 -----------------------------------------------------------------------------------------------------------------------------------
 
-# - switch.yaml:
-```
-##############################  CLIMATES BAXI ACS Y CLIMATIZACION  ##############################
-
-
-
-######## ACS Thermostat ########
-
-
-- platform: template
-  switches:
-    acs_control:
-      friendly_name: "Control ACS"
-      value_template: "{{ is_state('switch.ap017_habilitar_acs', 'on') }}"
-      turn_on:
-        - service: switch.turn_on
-          target:
-            entity_id: switch.ap017_habilitar_acs
-        - service: climate.set_hvac_mode
-          target:
-            entity_id: climate.acs
-          data:
-            hvac_mode: "heat"
-      turn_off:
-        - service: switch.turn_off
-          target:
-            entity_id: switch.ap017_habilitar_acs
-        - service: climate.set_hvac_mode
-          target:
-            entity_id: climate.acs
-          data:
-            hvac_mode: "off"
-
-
-
-######## Climatizacion Dual Mode Thermostat ########
-
-
-    climatizacion_control:
-      friendly_name: "Control Climatización"
-      value_template: >-
-        {% if is_state('switch.ap015_habilitar_aacc', 'on') and 
-              is_state('switch.ap016_habilitar_climatizacion', 'on') %}
-          cool
-        {% elif is_state('switch.ap015_habilitar_aacc', 'off') and 
-              is_state('switch.ap016_habilitar_climatizacion', 'on') %}
-          heat
-        {% else %}
-          off
-        {% endif %}
-      turn_on:
-        - service: switch.turn_on
-          target:
-            entity_id: switch.ap016_habilitar_climatizacion
-        - service: switch.turn_on
-          target:
-            entity_id: switch.ap015_habilitar_aacc
-        - service: climate.set_hvac_mode
-          target:
-            entity_id: climate.climatizacion
-          data:
-            hvac_mode: "cool"
-        - service: switch.turn_on
-          target:
-            entity_id: switch.ap016_habilitar_climatizacion
-        - service: switch.turn_off
-          target:
-            entity_id: switch.ap015_habilitar_aacc
-        - service: climate.set_hvac_mode
-          target:
-            entity_id: climate.climatizacion
-          data:
-            hvac_mode: "heat"
-      turn_off:
-        - service: switch.turn_off
-          target:
-            entity_id: switch.ap016_habilitar_climatizacion
-        - service: switch.turn_off
-          target:
-            entity_id: switch.ap015_habilitar_aacc
-        - service: climate.set_hvac_mode
-          target:
-            entity_id: climate.climatizacion
-          data:
-            hvac_mode: "off"
-
-
-
-##############################  END  ##############################
-
-
-```
------------------------------------------------------------------------------------------------------------------------------------
 
 # To do list:
 - The 3 consumed energy entities do not work. I don't know how to fix it. Modbus 433, 435 and 437.
