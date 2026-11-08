@@ -27,11 +27,11 @@ logger:
 # Enable Home Assistant API
 api:
   encryption:
-    key: *************************
+    key: !secret api_encryption_key
 
 ota:
   - platform: esphome
-    password: *************************
+    password: !secret ota_password
 
 ethernet:
   id: my_network
