@@ -1,12 +1,39 @@
-##############################  CLIMATES BAXI ACS Y CLIMATIZACION  ##############################
-
+###### CLIMATES BAXI ACS Y CLIMATIZACION ######
 
 
 - sensor:
     - name: "COP"
+      unique_id: cop_aerotermia
       unit_of_measurement: ""
-      state: "{{ (min(10, (states('sensor.potencia_termica')|float(0) / states('sensor.meter_aacc_potencia')|float(0))))| round(2) | abs }}"
+      state: >
+        {% set pt = states('sensor.potencia_termica') | float(0) %}
+        {% set pe = states('sensor.meter_aacc_potencia') | float(0) %}
+        {% if pe > 0 and pt > 0 %}
+          {{ min(10, pt / pe) | round(2) }}
+        {% else %}
+          0
+        {% endif %}
 
+    - name: "COP Acumulado Mensual"
+      unique_id: cop_acumulado_mensual
+      unit_of_measurement: ""
+      state: >
+        {% set et = states('sensor.energia_termica_mensual') | float(0) %}
+        {% set ee = states('sensor.energia_electrica_mensual') | float(0) %}
+        {% if ee > 0.05 %}
+          {{ (et / ee) | round(2) }}
+        {% else %}
+          {{ this.state | float(0) }}
+        {% endif %}
 
-
-##############################  END  ##############################
+    - name: "COP Total"
+      unique_id: cop_total
+      unit_of_measurement: ""
+      state: >
+        {% set et = states('sensor.energia_termica_total') | float(0) %}
+        {% set ee = states('sensor.energia_electrica_total') | float(0) %}
+        {% if ee > 0.05 %}
+          {{ (et / ee) | round(2) }}
+        {% else %}
+          0
+        {% endif %}

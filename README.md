@@ -89,6 +89,52 @@ it's a fantastic component and it made this whole cleanup possible!
 
 -----------------------------------------------------------------------------------------------------------------------------------
 
+# Version 3.0:
+
+The ESP32 configuration has been reviewed register by register against the official Remeha GTW-08 Modbus document,
+and cross-checked with other projects ([houthacker/remeha-modbus](https://github.com/houthacker/remeha-modbus),
+[martinsdan/UIMBaxiConnect-GTW08](https://github.com/martinsdan/UIMBaxiConnect-GTW08) and aio-remeha-modbus).
+Everything has been tested on my own Baxi Platinum BC iPlus.
+
+What changed:
+- New file `esp32_3.0.yaml` (the old ESP32 files are kept for reference). It goes from 39 to 60 entities.
+- All entities are now named with the code that appears in the Baxi manual / control panel (for example `AM012 Estado`,
+  `HM001 T. Ida Bomba` or `CM190 Consigna Ambiente Actual`), so you can look them up in the manual.
+  Entities with no code in the panel keep a descriptive name.
+- Entities that I have not been able to confirm yet on my own unit are named `TEST_<register or code> ...`.
+  They give real values, but use them with care.
+- New entities: `AM016 Temp. Impulsion`, `Temp. Retorno Recibida`, `DM029 Consigna Impulsion ACS`,
+  `CM030 T. Ambiente Alta Res.`, `CM190 Consigna Ambiente Actual`, `Consigna CC Aparato`, `HM033 Consigna Impulsion AACC`,
+  `AM091 Modo Temporada`, `Estado Controlador Principal`, `Generador Activo`, `Peticion Especial Controlador`,
+  `Modo Actual Zona Climatizacion`, `CP020 Funcion Zona 1`, `CP780 Estrategia Control Calefaccion`,
+  `AP028 Tipo Refrigeracion`, `Fallo Presente`, `Codigo Error Aparato`, `Prioridad Error Aparato` and a `Reiniciar ESP32` button.
+- The 3 energy entities `AC005`/`AC006`/`AC007` (registers 433, 435 and 437) have been removed: my unit never returned
+  valid data for them. Instead, the ESP32 now calculates the thermal energy itself by integrating `Potencia Termica`:
+  `Energia Termica Total` (never resets) and `Energia Termica Mensual` (resets on the 1st of each month).
+- `Estado Aparato 1` and `Estado Aparato 2` (registers 279 and 280) now work: their bits are shown as text
+  (for example "Bomba de Calor Encendida" or "Bomba, ACS Activa").
+- `CP320 Modo ACS` is now `DP200 Modo ACS` (its real code), with the options of the manual.
+- `Codigo Error Aparato` shows the error as in the panel (for example 02.23 = H02.23).
+  `Fallo Presente` ignores the invalid value 255, which gave false alarms of 15 seconds.
+- `Heater DUMB` and `Cooler DUMB` have been removed (they were only needed by the version 1.0 thermostat).
+- Updated to the current ESPHome API (`modbus::helpers::word_from_hex_str`).
+- The API key and the OTA password now use `!secret`. Add `api_encryption_key` and `ota_password` to your ESPHome `secrets.yaml`.
+- `template.yaml`: `COP` now gives 0 when the heat pump is stopped (no more division by zero), and there are two new sensors,
+  `COP Acumulado Mensual` and `COP Total` (see the template.yaml section below).
+- `automations.yaml` and `switch.yaml` have been deleted from the repository. They were no longer used since version 2.0.
+
+Note about entity IDs: Home Assistant may add a prefix (the device name, sometimes also the area) to the entity IDs it
+creates, for example `sensor.baxi_am012_estado`. The `climate.yaml` and `template.yaml` files of this project use the
+IDs without prefix (`sensor.am012_estado`), so rename your entities or adapt the YAML files.
+
+
+
+Thank you!
+
+
+
+-----------------------------------------------------------------------------------------------------------------------------------
+
 # Installation:
 
 First of all you need a GTW-08 gateway to convert the RBus signal to Modbus:
@@ -109,6 +155,8 @@ The wiring diagram:
 Now we will only have to create the ESP32 in ESPHome.
 
 # - ESP32.yaml:
+Remember to add `api_encryption_key` and `ota_password` to your ESPHome `secrets.yaml`, and to change `manual_ip` to your own network.
+
 ```
 #This ESP32 device comes from Imanol82's GitHub project.
 #Instructions for use can be found on github: https://github.com/Imanol82/Baxi-Dietrich-Remeha-to-Home-Assistant-with-an-ESP32
@@ -120,45 +168,38 @@ substitutions:
 
 esphome:
   name: $devicename
+  friendly_name: Baxi
 
 esp32:
   board: esp32-c3-devkitm-1
+## currently needed, but not in the future
   variant: esp32c3
   framework:
     type: esp-idf
-    version: latest
-#    platform_version: 6.5.0
-
-external_components:
-  - source: 
-      type: git
-      url: https://github.com/esphome/esphome
-      ref: d5bdf2575c151abfad39b6c24c3856395a7d0901
-    components:
-      - ethernet
+ #   version: latest
 
 # Enable logging
 logger:
+  baud_rate: 0
 
 # Enable Home Assistant API
 api:
   encryption:
-    key: "niWJ1FLNtf3pFq2BAKeFOwJXO56nZ/NrcNRFrqbGvAQ="
+    key: !secret api_encryption_key
 
 ota:
   - platform: esphome
-    password: "7ac0bf8f303c4e6af4692bb3ba1d0d6a"
+    password: !secret ota_password
 
 ethernet:
-  id: my_network
-  type: DM9051 # W5500
-  clk_pin: 7
-  mosi_pin: 10
-  miso_pin: 3
-  cs_pin: 9
-  interrupt_pin: 8
-  reset_pin: 6
-  clock_speed: 20MHz
+  type: DM9051
+  clk_pin: GPIO07
+  mosi_pin: GPIO10
+  miso_pin: GPIO03
+  cs_pin: GPIO09
+  interrupt_pin: GPIO08
+  reset_pin: GPIO06
+  clock_speed: 8MHz
   manual_ip:
     static_ip: 192.168.178.115
     gateway: 192.168.178.1
@@ -168,6 +209,7 @@ ethernet:
 time:
   - platform: homeassistant
     id: homeassistant_time
+    timezone: "CET-1CEST,M3.5.0,M10.5.0/3"
      
 uart:
   id: mod_bus
@@ -190,6 +232,57 @@ modbus_controller:
 
 
 
+##############################  ENERGIA TERMICA (calculada en el ESP32)  #
+#
+# Integra "Potencia Termica" (W) en el tiempo para dar kWh - el mismo
+# calculo que hacias con "Integral de Riemann" + "Utility Meter" en HA,
+# pero aqui, cada 60s. Solo el lado TERMICO: el electrico se queda en HA
+# porque el ESP32 no tiene forma de medirlo.
+#
+# "Total" nunca se resetea (persiste en flash entre reinicios). "Mensual"
+# se resetea solo el dia 1 de cada mes, usando la hora de Home Assistant
+# (componente "time:" ya definido arriba en este mismo YAML).
+
+globals:
+  - id: energia_termica_total_kwh
+    type: float
+    restore_value: yes
+    initial_value: '0'
+  - id: energia_termica_mensual_kwh
+    type: float
+    restore_value: yes
+    initial_value: '0'
+  - id: ultimo_mes_reset
+    type: int
+    restore_value: yes
+    initial_value: '0'
+
+interval:
+  - interval: 60s
+    then:
+      - lambda: |-
+          float potencia_w = id(potencia_termica).state;
+          if (isnan(potencia_w) || potencia_w < 0) return;
+
+          float energia_kwh_intervalo = (potencia_w * 60.0 / 3600.0) / 1000.0;
+
+          auto ahora = id(homeassistant_time).now();
+          if (ahora.is_valid()) {
+            int mes_actual = ahora.month;
+            if (mes_actual != id(ultimo_mes_reset)) {
+              id(energia_termica_mensual_kwh) = 0;
+              id(ultimo_mes_reset) = mes_actual;
+            }
+          }
+
+          id(energia_termica_total_kwh) += energia_kwh_intervalo;
+          id(energia_termica_mensual_kwh) += energia_kwh_intervalo;
+
+          id(energia_termica_total_sensor).publish_state(id(energia_termica_total_kwh));
+          id(energia_termica_mensual_sensor).publish_state(id(energia_termica_mensual_kwh));
+
+
+
 ##############################  ENTITIES  ##############################
 
 
@@ -200,6 +293,7 @@ modbus_controller:
 
 sensor:
 
+ 
   - platform: modbus_controller                       #272 PowerActualReceived
     modbus_controller_id: $devicename
     name: "Potencia de Salida Real"   
@@ -224,6 +318,7 @@ sensor:
     device_class: temperature
     state_class: measurement
     filters:
+      - filter_out: -1
       - multiply:  0.01
 
   - platform: modbus_controller                       #403 varHpHeatPumpTF
@@ -293,45 +388,7 @@ sensor:
     state_class: measurement
     filters:
       - multiply:  0.01
-
-  - platform: modbus_controller                       #433 varApChEnergyConsumption
-    modbus_controller_id: $devicename
-    name: "AC005 Energia CC"   
-    address: 433
-    register_type: holding
-    value_type: U_DWORD
-    unit_of_measurement: "kWh"
-    accuracy_decimals: 2
-    device_class: energy
-    state_class: measurement
-    filters:
-      - multiply:  1
-
-  - platform: modbus_controller                       #435 varApDhwEnergyConsumption
-    modbus_controller_id: $devicename
-    name: "AC006 Energia ACS"   
-    address: 435
-    register_type: holding
-    value_type: U_DWORD
-    unit_of_measurement: "kWh"
-    accuracy_decimals: 2
-    device_class: energy
-    state_class: measurement
-    filters:
-      - multiply:  1
-
-  - platform: modbus_controller                       #437 varApCoolingEnergyConsumption
-    modbus_controller_id: $devicename
-    name: "AC007 Energia AACC"   
-    address: 437
-    register_type: holding
-    value_type: U_DWORD
-    unit_of_measurement: "kWh"
-    accuracy_decimals: 2
-    device_class: energy
-    state_class: measurement
-    filters:
-      - multiply:  1
+      
 
   - platform: modbus_controller                       #1104 varZoneTRoom
     modbus_controller_id: $devicename
@@ -372,6 +429,7 @@ sensor:
 
   - platform: template
     name: "Potencia Termica" 
+    id: potencia_termica
     unit_of_measurement: "W"
     accuracy_decimals: 1
     device_class: power
@@ -379,7 +437,184 @@ sensor:
     lambda: |-
       return (id(am056_caudal).state * 60 * (id(hm001_t_ida_bomba).state - id(hm002_t_retorno_bomba).state) / 0.86);
 
+  - platform: template                                 # Se rellena desde el interval de arriba, nunca se resetea
+    name: "Energia Termica Total"
+    id: energia_termica_total_sensor
+    unit_of_measurement: "kWh"
+    accuracy_decimals: 3
+    device_class: energy
+    state_class: total_increasing
+    entity_category: diagnostic
 
+  - platform: template                                 # Se rellena desde el interval de arriba, se resetea el dia 1 de cada mes
+    name: "Energia Termica Mensual"
+    id: energia_termica_mensual_sensor
+    unit_of_measurement: "kWh"
+    accuracy_decimals: 3
+    device_class: energy
+    state_class: total_increasing
+    entity_category: diagnostic
+
+
+
+##############################  CONFIRMADOS (doc oficial Remeha + martinsdan)  ###
+#
+# Estas 4 direcciones ya se han visto reaccionar con datos reales (ciclo
+# sostenido de ACS/CC del 20/09): valores sensatos, sin sentinela, y
+# 400/408 y 274 encajan con el documento oficial de Remeha y el proyecto
+# martinsdan/UIMBaxiConnect-GTW08. Ya no llevan "TEST_".
+#
+# Codigos Baxi (los del manual de tu Platinum BC iPlus, estilo "HM001"):
+# solo 408 tiene uno confirmado (DM029). 274, 400 y 1105 NO tienen
+# codigo visible en el panel/instalador - son construcciones internas
+# del propio gateway GTW-08 (por ejemplo 274/400 son el mismo dato
+# "recibido" a nivel de controlador principal, no algo que el equipo
+# muestre bajo un codigo propio), asi que se quedan con nombre
+# descriptivo en vez de codigo.
+#
+# Se han quitado 3 duplicados exactos confirmados por el propio documento
+# oficial (mismo indice interno CANopen, ej. 408 y la zona2 comparten
+# "5604.0"): TEST_273 (= TEST_400, nivel "recibido" vs nivel "aparato"),
+# TEST_1103 (= AM027, el mismo sensor exterior reflejado en la zona) y
+# TEST_1613 (= 408, la misma consigna reflejada en la zona ACS).
+#
+# TEST_350/351 de tandas anteriores tambien se quitaron del todo: el
+# documento oficial confirma que es un timestamp interno, no un sensor.
+
+  - platform: modbus_controller                       #274 ReturnTemperatureReceived (doc oficial Remeha)
+    modbus_controller_id: $devicename
+    name: "Temp. Retorno Recibida"
+    id: test_274
+    address: 274
+    register_type: holding
+    value_type: S_WORD
+    unit_of_measurement: "°C"
+    accuracy_decimals: 2
+    device_class: temperature
+    state_class: measurement
+    entity_category: diagnostic
+    filters:
+      - multiply: 0.01
+
+  - platform: modbus_controller                       #400 varApTflow (doc oficial Remeha)
+    modbus_controller_id: $devicename
+    name: "AM016 Temp. Impulsion"
+    id: test_400
+    address: 400
+    register_type: holding
+    value_type: S_WORD
+    unit_of_measurement: "°C"
+    accuracy_decimals: 2
+    device_class: temperature
+    state_class: measurement
+    entity_category: diagnostic
+    filters:
+      - multiply: 0.01
+
+  - platform: modbus_controller                       #408 varDhwFlowTempSetpoint (doc oficial Remeha)
+    modbus_controller_id: $devicename
+    name: "DM029 Consigna Impulsion ACS"
+    id: test_408
+    address: 408
+    register_type: holding
+    value_type: U_WORD
+    unit_of_measurement: "°C"
+    accuracy_decimals: 2
+    device_class: temperature
+    state_class: measurement
+    entity_category: diagnostic
+    filters:
+      - multiply: 0.01
+
+  - platform: modbus_controller                       #1105 varZoneRoomTemperatureMeasured - zona 1 (circuito A): la misma temperatura ambiente que CM030 con resolucion de 0,01
+    modbus_controller_id: $devicename
+    name: "CM030 T. Ambiente Alta Res."
+    id: test_1105
+    address: 1105
+    register_type: holding
+    value_type: S_WORD
+    unit_of_measurement: "°C"
+    accuracy_decimals: 2
+    device_class: temperature
+    state_class: measurement
+    entity_category: diagnostic
+    filters:
+      - multiply: 0.01
+
+
+
+##############################  TEST - PENDIENTES DE CONFIRMAR  #########
+#
+# Estas 3 dieron valores reales (no sentinela) pero solo en reposo -
+# AM091 (temporada) es estable por naturaleza; 406/HM033 son consignas
+# de CC/AACC, y esos modos estaban apagados cuando se leyeron. Cuando
+# vuelvas a activar CC o AACC un rato, confirmamos si reaccionan de
+# verdad y les quitamos el "TEST_".
+#
+# Codigos Baxi: AM091 y HM033 confirmados en el manual de tu Platinum
+# BC iPlus (coinciden nombre y descripcion exactos). 406 (varChSetpoint)
+# no tiene codigo visible encontrado - parece otra construccion interna
+# del gateway, se queda con el numero de registro tal cual.
+#
+# Se han borrado del todo (confirmado no soportado en tu hardware, sin
+# ni un solo valor real en mas de 24h con ciclos sostenidos de ACS/AACC/
+# CC de por medio): TEST_413 (Potencia de Salida %, sentinela 0xFFFF
+# constante), TEST_460 (Potencia Real kW), TEST_463 (COP Umbral),
+# TEST_456 (Corriente Unidad Exterior), TEST_9230 (COP Instantaneo),
+# TEST_439 (Energia Total), TEST_453/459 (Velocidades de bomba),
+# TEST_481 (Deshielo Activo).
+
+  - platform: modbus_controller                       #406 varChSetpoint - consigna de CC del aparato (doc oficial + martinsdan) - confirmado, reacciona en CC y ACS
+    modbus_controller_id: $devicename
+    name: "Consigna CC Aparato"
+    address: 406
+    register_type: holding
+    value_type: U_WORD
+    unit_of_measurement: "°C"
+    accuracy_decimals: 2
+    device_class: temperature
+    state_class: measurement
+    entity_category: diagnostic
+    filters:
+      - multiply: 0.01
+
+  - platform: modbus_controller                       #407 varHpCoolingSetpoint - consigna impulsion en modo refrigeracion (doc oficial + martinsdan; manual Platinum BC iPlus: HM033)
+    modbus_controller_id: $devicename
+    name: "HM033 Consigna Impulsion AACC"
+    address: 407
+    register_type: holding
+    value_type: U_WORD
+    unit_of_measurement: "°C"
+    accuracy_decimals: 2
+    device_class: temperature
+    state_class: measurement
+    entity_category: diagnostic
+    filters:
+      - multiply: 0.01
+
+
+
+##############################  TEST - DOC OFICIAL (repaso completo GTW-08)  ####
+#
+# Repaso sistematico del documento oficial completo (capitulos Bewaking
+# hoofdregeling, Apparaat, Service, Zonas) buscando todo lo que faltaba
+# por poner. Se excluyen a proposito: horario semanal completo (sin
+# valor como sensor), identificacion de placas/versiones (estatico),
+# sensores de combustion (no aplican, es bomba de calor), Cascada y
+# Deposito de Inercia (no aplican a tu instalacion).
+
+  - platform: modbus_controller                       #1102 Valor de consigna de temperatura ambiente actual solicitado (CM190, escala 0.1 segun manual oficial)
+    modbus_controller_id: $devicename
+    name: "CM190 Consigna Ambiente Actual"
+    address: 1102
+    register_type: holding
+    value_type: S_WORD
+    unit_of_measurement: "°C"
+    accuracy_decimals: 1
+    device_class: temperature
+    state_class: measurement
+    filters:
+      - multiply: 0.1
 
 ##############################  BINARY SENSORS  ########################
 
@@ -393,7 +628,26 @@ binary_sensor:
     address: 1110
     register_type: holding
 
+  - platform: modbus_controller                       #512 varApServiceRequired (AM011 segun el manual de Remeha; no figura en los manuales de Baxi)
+    modbus_controller_id: $devicename
+    name: "TEST_AM011 Servicio Requerido"
+    address: 512
+    register_type: holding
 
+  - platform: modbus_controller                       #531 varApplianceOnError (el valor invalido 255 daba falsos "on" de 15 s; los fallos reales duran 2 min)
+    modbus_controller_id: $devicename
+    name: "Fallo Presente"
+    address: 531
+    register_type: holding
+    filters:
+      - delayed_on: 40s
+
+  - platform: modbus_controller                       #275 bit 6 (0x40) - generador (compresor) activo, segun aio-remeha-modbus (ApplianceDemandStatus)
+    modbus_controller_id: $devicename
+    name: "Generador Activo"
+    address: 275
+    register_type: holding
+    bitmask: 0x40
 
 ##############################  SWITCH  ################################
 
@@ -427,24 +681,6 @@ switch:
     register_type: holding
     use_write_multiple: True
     bitmask: 1
-    
-  - platform: modbus_controller                       #0 Heater DUMB
-    modbus_controller_id: $devicename
-    name: "Heater DUMB"
-    id: heater_dumb
-    address: 0
-    register_type: holding
-    use_write_multiple: True
-    bitmask: 0
-    
-  - platform: modbus_controller                       #0 Heater DUMB
-    modbus_controller_id: $devicename
-    name: "Cooler DUMB"
-    id: cooler_dumb
-    address: 0
-    register_type: holding
-    use_write_multiple: True
-    bitmask: 0
 
 
 
@@ -466,6 +702,7 @@ number:
     step: 0.5
     value_type: U_WORD 
     multiply: 100
+    mode: BOX
 
   - platform: modbus_controller                       #387 parApNeutralBandSummerWinter
     modbus_controller_id: $devicename
@@ -479,6 +716,7 @@ number:
     step: 0.5
     value_type: U_WORD 
     multiply: 100
+    mode: BOX
 
   - platform: modbus_controller                       #388 parApNeutralBandSummerWinter
     modbus_controller_id: $devicename
@@ -492,6 +730,7 @@ number:
     step: 0.5
     value_type: S_WORD 
     multiply: 100
+    mode: BOX
 
   - platform: modbus_controller                       #664 parZoneRoomManualSetpoint
     modbus_controller_id: $devicename
@@ -505,6 +744,7 @@ number:
     step: 0.5
     value_type: U_WORD 
     multiply: 10
+    mode: BOX
 
   - platform: modbus_controller                       #672 parZoneTFlowSetpointMax
     modbus_controller_id: $devicename
@@ -518,6 +758,7 @@ number:
     step: 0.5
     value_type: U_WORD 
     multiply: 100
+    mode: BOX
 
   - platform: modbus_controller                       #673 parZoneTFlowCoolingMixingSetpoint
     modbus_controller_id: $devicename
@@ -531,6 +772,7 @@ number:
     step: 0.5
     value_type: U_WORD 
     multiply: 100
+    mode: BOX
 
   - platform: modbus_controller                       #674 parZoneSlope
     modbus_controller_id: $devicename
@@ -542,6 +784,7 @@ number:
     step: 0.1
     value_type: U_WORD 
     multiply: 10
+    mode: BOX
 
   - platform: modbus_controller                       #675 parZoneHCZPD
     modbus_controller_id: $devicename
@@ -555,6 +798,7 @@ number:
     step: 0.5
     value_type: U_WORD 
     multiply: 10
+    mode: BOX
 
   - platform: modbus_controller                       #687 parZonePumpPostRun
     modbus_controller_id: $devicename
@@ -566,6 +810,7 @@ number:
     max_value: 20
     value_type: U_WORD 
     multiply: 1
+    mode: BOX
 
   - platform: modbus_controller                       #1177 parZoneDhwComfortSetpoint
     modbus_controller_id: $devicename
@@ -579,6 +824,7 @@ number:
     step: 0.5
     value_type: U_WORD 
     multiply: 100
+    mode: BOX
 
   - platform: modbus_controller                       #1198 parZoneDhwCalorifierHysterisis
     modbus_controller_id: $devicename
@@ -592,6 +838,7 @@ number:
     step: 0.5
     value_type: U_WORD 
     multiply: 100
+    mode: BOX
 
 
 
@@ -615,15 +862,52 @@ select:
 
   - platform: modbus_controller                       #1161 parZoneMode 2
     modbus_controller_id: $devicename
-    name: "CP320 Modo ACS"
+    name: "DP200 Modo ACS"
     address: 1161
     use_write_multiple: True
     value_type: U_WORD
     optionsmap:
       "Programacion": 0
       "Modo Manual": 1
-      "Antiescarcha": 2
+      "Desactivado": 2
+      "Temporal": 3
     skip_updates: 2
+
+  - platform: modbus_controller                       #671 parZoneHeatingControlStrategy (CP780 en el panel)
+    modbus_controller_id: $devicename
+    name: "CP780 Estrategia Control Calefaccion"
+    address: 671
+    use_write_multiple: false
+    value_type: U_WORD
+    optionsmap:
+      "Auto": 0
+      "RTC (Solo Ambiente)": 1
+      "OTC (Solo Curva)": 2
+      "OTC+RTC (Mezcla)": 3
+    skip_updates: 2
+
+  - platform: modbus_controller                       #502 parApCoolingEnabled (doc oficial Remeha) - distinto de AP015/503, confirmado (manual Baxi: AP028, 0 apagado / 1 en funcionamiento / 2 gratuita)
+    modbus_controller_id: $devicename
+    name: "AP028 Tipo Refrigeracion"
+    address: 502
+    use_write_multiple: false
+    value_type: U_WORD
+    optionsmap:
+      "Apagado": 0
+      "Refrigeracion Activa": 1
+      "Refrigeracion Libre": 2
+    skip_updates: 2
+  
+
+
+##############################  BUTTON  ###########################
+
+
+    
+button:
+  - platform: restart
+    name: "Reiniciar ESP32"
+    id: restart_button
   
 
 
@@ -641,19 +925,18 @@ text_sensor:
     bitmask: 1
     raw_encode: HEXBYTES
     lambda: |-
-      uint8_t value = modbus_controller::word_from_hex_str(x, 0);
-      switch (value) {
-        case 0: return std::string("Demanda de Apoyo Hidraulico Encendido");
-        case 1: return std::string("Bomba de Calor Encendida");
-        case 2: return std::string("Respaldo Electrico, Etapa 1 Encendido");
-        case 3: return std::string("Respaldo Electrico, Etapa 2 Encendido");
-        case 4: return std::string("Respaldo Electrico ACS Encendido");
-        case 5: return std::string("Servicio Necesario");
-        case 6: return std::string("Reinicio Necesario");
-        case 7: return std::string("Presion de Agua Baja");
-        default: return std::string("Desconocido");
-      }
-      return x;
+      uint8_t value = modbus::helpers::word_from_hex_str(x, 0);
+      std::string result = "";
+      if (value & 0x01) result += "Llama Encendida, ";
+      if (value & 0x02) result += "Bomba de Calor Encendida, ";
+      if (value & 0x04) result += "Respaldo Electrico Etapa 1 Encendido, ";
+      if (value & 0x08) result += "Respaldo Electrico Etapa 2 Encendido, ";
+      if (value & 0x10) result += "Respaldo Electrico ACS Encendido, ";
+      if (value & 0x20) result += "Servicio Necesario, ";
+      if (value & 0x40) result += "Reinicio Necesario, ";
+      if (value & 0x80) result += "Presion de Agua Baja, ";
+      if (result.empty()) return std::string("Ninguno");
+      return result.substr(0, result.size() - 2);
 
   - platform: modbus_controller                       #280 ApplianceStatus2
     modbus_controller_id: $devicename
@@ -663,18 +946,17 @@ text_sensor:
     bitmask: 1
     raw_encode: HEXBYTES
     lambda: |-
-      uint8_t value = modbus_controller::word_from_hex_str(x, 0);
-      switch (value) {
-        case 0: return std::string("Bomba");
-        case 1: return std::string("V3V Abierta");
-        case 2: return std::string("V3V");
-        case 3: return std::string("V3V Cerrada");
-        case 4: return std::string("ACS Activa");
-        case 5: return std::string("Ch Activa");
-        case 6: return std::string("Refrigeracion Activa");
-        default: return std::string("Desconocido");
-      }
-      return x;
+      uint8_t value = modbus::helpers::word_from_hex_str(x, 0);
+      std::string result = "";
+      if (value & 0x01) result += "Bomba, ";
+      if (value & 0x02) result += "V3V Abriendo, ";
+      if (value & 0x04) result += "V3V, ";
+      if (value & 0x08) result += "V3V Cerrada, ";
+      if (value & 0x10) result += "ACS Activa, ";
+      if (value & 0x20) result += "CC Activa, ";
+      if (value & 0x40) result += "Refrigeracion Activa, ";
+      if (result.empty()) return std::string("Ninguno");
+      return result.substr(0, result.size() - 2);
 
   - platform: modbus_controller                       #411 varApStatus
     modbus_controller_id: $devicename
@@ -684,7 +966,7 @@ text_sensor:
     bitmask: 1
     raw_encode: HEXBYTES
     lambda: |-
-      uint8_t value = modbus_controller::word_from_hex_str(x, 0);
+      uint8_t value = modbus::helpers::word_from_hex_str(x, 0);
       switch (value) {
         case 0: return std::string("En Espera");
         case 1: return std::string("Demanda Calor");
@@ -711,7 +993,7 @@ text_sensor:
     bitmask: 1
     raw_encode: HEXBYTES
     lambda: |-
-      uint8_t value = modbus_controller::word_from_hex_str(x, 0);
+      uint8_t value = modbus::helpers::word_from_hex_str(x, 0);
       switch (value) {
         case 0: return std::string("Parado");
         case 1: return std::string("Ciclo Anticorto");
@@ -730,7 +1012,10 @@ text_sensor:
         case 70: return std::string("No se reunen las Condiciones para Deshielo");
         case 71: return std::string("Deshielo en Curso");
         case 75: return std::string("Apagado del Compresor por Condensacion");
+        case 76: return std::string("Apagado del Compresor por Caudal");
         case 78: return std::string("Correccion del Punto de Consigna de Temp.");
+        case 79: return std::string("Derivacion de Compresor y Respaldo en Calefaccion/ACS");
+        case 80: return std::string("Derivacion de Compresor y Respaldo en Refrigeracion");
         case 82: return std::string("Temp. Inferior a Temp. Minima de Refrigeracion");
         case 88: return std::string("BL-Respaldo Limitado");
         case 89: return std::string("BL-Bomba Limitada");
@@ -739,19 +1024,23 @@ text_sensor:
         case 92: return std::string("PV-con Bomba de Calor");
         case 93: return std::string("PV-con Bomba de Calor y Respaldo");
         case 94: return std::string("BL-Red Electrica Inteligente");
-        default: return std::string("Desconocido");
+        default: {
+          char buf[24];
+          snprintf(buf, sizeof(buf), "Subestado %u", (unsigned) value);
+          return std::string(buf);
+        }
       }
       return x;
 
-  - platform: modbus_controller                       #1109 varZoneCurrentHeatingMode
+  - platform: modbus_controller                       #1109 varZoneCurrentHeatingMode - sin codigo de panel (el CM130 real de la zona 1 es el 1107)
     modbus_controller_id: $devicename
-    name: "CM130 Actividad Climatizacion"
+    name: "Modo Actual Zona Climatizacion"
     address: 1109
     register_type: holding
     bitmask: 1
     raw_encode: HEXBYTES
     lambda: |-
-      uint8_t value = modbus_controller::word_from_hex_str(x, 0);
+      uint8_t value = modbus::helpers::word_from_hex_str(x, 0);
       switch (value) {
         case 0: return std::string("Off");
         case 1: return std::string("Calefaccion");
@@ -768,16 +1057,224 @@ text_sensor:
     bitmask: 1
     raw_encode: HEXBYTES
     lambda: |-
-      uint8_t value = modbus_controller::word_from_hex_str(x, 0);
+      uint8_t value = modbus::helpers::word_from_hex_str(x, 0);
       switch (value) {
-        case 0: return std::string("Antiescarcha");
-        case 1: return std::string("ECO");
+        case 0: return std::string("Desactivado");
+        case 1: return std::string("Reducida");
         case 2: return std::string("Confort");
-        case 3: return std::string("Antilegionella");
+        case 3: return std::string("Antilegionela");
+        default: {
+          char buf[24];
+          snprintf(buf, sizeof(buf), "Valor %u", (unsigned) value);
+          return std::string(buf);
+        }
+      }
+      return x;
+
+  - platform: modbus_controller                       #385 varApSeasonMode (doc oficial + manual Platinum BC iPlus: AM091) - confirmado, controla si CC/AACC pueden arrancar segun AP073/AP075
+    modbus_controller_id: $devicename
+    name: "AM091 Modo Temporada"
+    address: 385
+    register_type: holding
+    bitmask: 1
+    raw_encode: HEXBYTES
+    lambda: |-
+      uint8_t value = modbus::helpers::word_from_hex_str(x, 0);
+      switch (value) {
+        case 0: return std::string("Invierno");
+        case 1: return std::string("Proteccion Antihielo Invierno");
+        case 2: return std::string("Banda Neutra Verano");
+        case 3: return std::string("Verano");
+        default: return std::string("Desconocido");
+      }
+      return x;
+    filters:
+      - lambda: |-
+          if (x == "Desconocido") return {};
+          return x;
+
+  - platform: modbus_controller                       #389 AP074 Modo verano forzado (solo lectura)
+    modbus_controller_id: $devicename
+    name: "TEST_AP074 Modo Verano Forzado"
+    address: 389
+    register_type: holding
+    bitmask: 1
+    raw_encode: HEXBYTES
+    lambda: |-
+      uint8_t value = modbus::helpers::word_from_hex_str(x, 0);
+      switch (value) {
+        case 0: return std::string("Desactivado");
+        case 1: return std::string("Activado");
+        default: {
+          char buf[24];
+          snprintf(buf, sizeof(buf), "Valor %u", (unsigned) value);
+          return std::string(buf);
+        }
+      }
+      return x;
+
+  - platform: modbus_controller                       #275 ProducerManagerStatusBitfieldReceived - bitfield; significados segun aio-remeha-modbus (ApplianceDemandStatus), bit 6 = generador (compresor) activo; confirmado con las sesiones de ACS
+    modbus_controller_id: $devicename
+    name: "Estado Controlador Principal"
+    address: 275
+    register_type: holding
+    bitmask: 1
+    raw_encode: HEXBYTES
+    lambda: |-
+      uint8_t value = modbus::helpers::word_from_hex_str(x, 0);
+      std::string result = "";
+      if (value & 0x01) result += "Circuitos Directos Liberados, ";
+      if (value & 0x02) result += "Circuitos Mezcla Liberados, ";
+      if (value & 0x04) result += "Valvulas Abiertas o Bomba en Marcha (Seguridad), ";
+      if (value & 0x08) result += "Demanda Manual de Calor, ";
+      if (value & 0x10) result += "Refrigeracion Permitida, ";
+      if (value & 0x20) result += "Circuitos ACS Liberados, ";
+      if (value & 0x40) result += "Generador Activo, ";
+      if (value & 0x80) result += "Bit 7 (sin documentar), ";
+      if (result.empty()) return std::string("Ninguno");
+      return result.substr(0, result.size() - 2);
+
+  - platform: modbus_controller                       #276 ProducerManagerRequestReceived - enum, confirmado (patron dia/noche antiheladas)
+    modbus_controller_id: $devicename
+    name: "Peticion Especial Controlador"
+    address: 276
+    register_type: holding
+    bitmask: 1
+    raw_encode: HEXBYTES
+    lambda: |-
+      uint8_t value = modbus::helpers::word_from_hex_str(x, 0);
+      switch (value) {
+        case 0: return std::string("Proteccion Antiheladas");
+        case 1: return std::string("Proteccion Antiheladas Solo Bomba");
+        case 2: return std::string("Chimenea / Puesta en Marcha");
+        case 3: return std::string("Solicitud de Servicio");
+        default: return std::string("Ninguna");
+      }
+      return x;
+
+  - platform: modbus_controller                       #277 Appliance Error - codigo en 2 bytes, decimal HH.LL (0x0217 = 02.23 = H02.23 Error circ. sistem., confirmado con un fallo real); 0xFFFF = sin error
+    modbus_controller_id: $devicename
+    name: "Codigo Error Aparato"
+    address: 277
+    register_type: holding
+    bitmask: 1
+    raw_encode: HEXBYTES
+    lambda: |-
+      uint16_t v = modbus::helpers::word_from_hex_str(x, 0);
+      if (v == 0xFFFF) return std::string("Sin Error");
+      char buf[32];
+      snprintf(buf, sizeof(buf), "%02u.%02u (0x%04X)", (unsigned)(v >> 8), (unsigned)(v & 0xFF), (unsigned)v);
+      return std::string(buf);
+
+  - platform: modbus_controller                       #278 Appliance Error Priority - enum (3 = Bloqueo Temporal, confirmado con el fallo H02.23)
+    modbus_controller_id: $devicename
+    name: "Prioridad Error Aparato"
+    address: 278
+    register_type: holding
+    bitmask: 1
+    raw_encode: HEXBYTES
+    lambda: |-
+      uint8_t value = modbus::helpers::word_from_hex_str(x, 0);
+      switch (value) {
+        case 0: return std::string("Bloqueo");
+        case 3: return std::string("Bloqueo Temporal");
+        case 6: return std::string("Aviso");
+        case 255: return std::string("Sin Fallo");
         default: return std::string("Desconocido");
       }
       return x;
 
+  - platform: modbus_controller                       #513 varApCurrentOrUpcomingServiceNotification - enum, sin confirmar aun
+    modbus_controller_id: $devicename
+    name: "TEST_513 Notificacion Servicio"
+    address: 513
+    register_type: holding
+    bitmask: 1
+    raw_encode: HEXBYTES
+    lambda: |-
+      uint8_t value = modbus::helpers::word_from_hex_str(x, 0);
+      switch (value) {
+        case 1: return std::string("A");
+        case 2: return std::string("B");
+        case 3: return std::string("C");
+        case 4: return std::string("Personalizado");
+        case 5: return std::string("D");
+        default: return std::string("Ninguna");
+      }
+      return x;
+
+  - platform: modbus_controller                       #641 parZoneFunction - enum, confirmado (manual Baxi: CP020 Tipo de circuito, 5 = fancoil)
+    modbus_controller_id: $devicename
+    name: "CP020 Funcion Zona 1"
+    address: 641
+    register_type: holding
+    bitmask: 1
+    raw_encode: HEXBYTES
+    lambda: |-
+      uint8_t value = modbus::helpers::word_from_hex_str(x, 0);
+      switch (value) {
+        case 0: return std::string("Desactivado");
+        case 1: return std::string("Directo");
+        case 2: return std::string("Circuito Mezcla");
+        case 3: return std::string("Piscina");
+        case 4: return std::string("Alta Temperatura");
+        case 5: return std::string("Fan Coil");
+        case 6: return std::string("Tanque ACS");
+        case 7: return std::string("Tanque ACS Electrico");
+        case 8: return std::string("Programa Horario");
+        case 9: return std::string("Calor de Proceso");
+        case 10: return std::string("ACS Estratificado");
+        case 11: return std::string("ACS BIC");
+        case 12: return std::string("Tanque ACS Comercial");
+        case 254: return std::string("ACS Primario");
+        default: return std::string("Desconocido");
+      }
+      return x;
+
+  - platform: modbus_controller                       #1107 Actividad de zona activa actual (CM130 real de la zona 1)
+    modbus_controller_id: $devicename
+    name: "CM130 Actividad Climatizacion"
+    address: 1107
+    register_type: holding
+    bitmask: 1
+    raw_encode: HEXBYTES
+    lambda: |-
+      uint8_t value = modbus::helpers::word_from_hex_str(x, 0);
+      switch (value) {
+        case 0: return std::string("Desactivado");
+        case 1: return std::string("Reducida");
+        case 2: return std::string("Confort");
+        case 3: return std::string("Antilegionela");
+        default: {
+          char buf[24];
+          snprintf(buf, sizeof(buf), "Valor %u", (unsigned) value);
+          return std::string(buf);
+        }
+      }
+      return x;
+
+  - platform: modbus_controller                       #1108 Modo de funcionamiento actual de la zona (CM120)
+    modbus_controller_id: $devicename
+    name: "TEST_CM120 Modo Funcionamiento Climatizacion"
+    address: 1108
+    register_type: holding
+    bitmask: 1
+    raw_encode: HEXBYTES
+    lambda: |-
+      uint8_t value = modbus::helpers::word_from_hex_str(x, 0);
+      switch (value) {
+        case 0: return std::string("Programacion");
+        case 1: return std::string("Modo Manual");
+        case 2: return std::string("Desactivado");
+        case 3: return std::string("Temporal");
+        case 4: return std::string("Vacaciones");
+        default: {
+          char buf[24];
+          snprintf(buf, sizeof(buf), "Valor %u", (unsigned) value);
+          return std::string(buf);
+        }
+      }
+      return x;
 
 
 ##############################  END  ###################################
@@ -793,20 +1290,52 @@ climate: !include climate.yaml
 
 # - template.yaml:
 ```
-##############################  CLIMATES BAXI ACS Y CLIMATIZACION  ##############################
-
+###### CLIMATES BAXI ACS Y CLIMATIZACION ######
 
 
 - sensor:
     - name: "COP"
+      unique_id: cop_aerotermia
       unit_of_measurement: ""
-      state: "{{ (min(10, (states('sensor.potencia_termica')|float(0) / states('sensor.meter_aacc_potencia')|float(0))))| round(2) | abs }}"
+      state: >
+        {% set pt = states('sensor.potencia_termica') | float(0) %}
+        {% set pe = states('sensor.meter_aacc_potencia') | float(0) %}
+        {% if pe > 0 and pt > 0 %}
+          {{ min(10, pt / pe) | round(2) }}
+        {% else %}
+          0
+        {% endif %}
 
+    - name: "COP Acumulado Mensual"
+      unique_id: cop_acumulado_mensual
+      unit_of_measurement: ""
+      state: >
+        {% set et = states('sensor.energia_termica_mensual') | float(0) %}
+        {% set ee = states('sensor.energia_electrica_mensual') | float(0) %}
+        {% if ee > 0.05 %}
+          {{ (et / ee) | round(2) }}
+        {% else %}
+          {{ this.state | float(0) }}
+        {% endif %}
 
-
-##############################  END  ##############################
-
+    - name: "COP Total"
+      unique_id: cop_total
+      unit_of_measurement: ""
+      state: >
+        {% set et = states('sensor.energia_termica_total') | float(0) %}
+        {% set ee = states('sensor.energia_electrica_total') | float(0) %}
+        {% if ee > 0.05 %}
+          {{ (et / ee) | round(2) }}
+        {% else %}
+          0
+        {% endif %}
 ```
+The 3 COP sensors need the electrical power of your heat pump. In my case it is `sensor.meter_aacc_potencia`
+(a "Combine the state of several sensors" helper that adds the power meters of the indoor and outdoor units),
+and two more helpers created from the Home Assistant UI:
+- `sensor.energia_electrica_total`: an "Integral" (Riemann sum) helper of `sensor.meter_aacc_potencia`, in kWh.
+- `sensor.energia_electrica_mensual`: a monthly "Utility Meter" helper of `sensor.energia_electrica_total`.
+
 -----------------------------------------------------------------------------------------------------------------------------------
 
 # - climate.yaml:
@@ -913,13 +1442,9 @@ climate: !include climate.yaml
 
 
 # To do list:
-- The 3 consumed energy entities do not work. I don't know how to fix it. Modbus 433, 435 and 437.
-
-![image](https://github.com/user-attachments/assets/ecc29539-e151-4f70-a6ed-c8620cdfdcc6)
-
-- The 2 status entities of the device do not work. Modbus 279 and 280.
-
-![image](https://github.com/user-attachments/assets/93f3bb1d-4d9c-4a95-aecb-88168c2c7d3e)
+- Confirm the 4 `TEST_` entities on my unit (`TEST_513 Notificacion Servicio`, `TEST_AM011 Servicio Requerido`,
+  `TEST_AP074 Modo Verano Forzado` and `TEST_CM120 Modo Funcionamiento Climatizacion`).
+- The energy registers 433, 435 and 437 never gave valid data on my unit. If they work on yours, please tell me!
 
 -----------------------------------------------------------------------------------------------------------------------------------
 I hope this project is useful and I hope to improve it with everyone's help. 
