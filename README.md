@@ -97,7 +97,7 @@ and cross-checked with other projects ([houthacker/remeha-modbus](https://github
 Everything has been tested on my own Baxi Platinum BC iPlus.
 
 What changed:
-- New file `esp32_3.0.yaml` (the old ESP32 files are kept for reference). It goes from 39 to 60 entities.
+- New file `esp32_3.0.yaml` (the old ESP32 files are kept for reference). It goes from 39 to 59 entities.
 - All entities are now named with the code that appears in the Baxi manual / control panel (for example `AM012 Estado`,
   `HM001 T. Ida Bomba` or `CM190 Consigna Ambiente Actual`), so you can look them up in the manual.
   Entities with no code in the panel keep a descriptive name.
